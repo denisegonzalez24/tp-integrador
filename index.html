@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Viajero AMBA</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+
+<body>
+  <main class="app">
+    <section class="panel">
+      <p class="eyebrow">Demo prueba fetch</p>
+      <h1>Viajero AMBA</h1>
+      <p class="description">
+        Demo simple para consultar lineas de colectivos detectadas en tiempo real
+        desde API oficial de transporte de Buenos Aires.
+      </p>
+
+      <button id="loadButton" type="button">Cargar lineas</button>
+
+      <p id="status" class="status" aria-live="polite"></p>
+      <p id="error" class="error" aria-live="assertive"></p>
+
+      <section class="results">
+        <h2>Lineas detectadas</h2>
+        <div id="results" class="results-list">
+          <p class="empty">Todavia no se cargaron lineas.</p>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+
+</html>

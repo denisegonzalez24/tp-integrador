@@ -1,0 +1,140 @@
+:root {
+  color-scheme: light;
+  --bg: #f4f7fb;
+  --panel: #ffffff;
+  --text: #122033;
+  --muted: #5b6b7f;
+  --accent: #007a78;
+  --accent-dark: #005f5d;
+  --border: #d9e2ec;
+  --error-bg: #fff1f0;
+  --error-text: #b42318;
+  --shadow: 0 18px 40px rgba(18, 32, 51, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background:
+    radial-gradient(circle at top, rgba(0, 122, 120, 0.12), transparent 35%),
+    var(--bg);
+  color: var(--text);
+}
+
+.app {
+  padding: 24px 16px 40px;
+}
+
+.panel {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+h1,
+h2 {
+  margin: 0;
+}
+
+h1 {
+  font-size: 2rem;
+}
+
+.description {
+  margin: 12px 0 20px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+button {
+  border: 0;
+  border-radius: 12px;
+  padding: 14px 18px;
+  font: inherit;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--accent);
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+button:hover {
+  background: var(--accent-dark);
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.status,
+.error {
+  min-height: 24px;
+  margin: 14px 0 0;
+}
+
+.status {
+  color: var(--muted);
+}
+
+.error {
+  color: var(--error-text);
+}
+
+.results {
+  margin-top: 24px;
+}
+
+.results-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.line-card,
+.empty {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #fbfdff;
+}
+
+.line-card {
+  font-weight: 700;
+}
+
+.empty {
+  color: var(--muted);
+}
+
+@media (min-width: 640px) {
+  .app {
+    padding: 40px 24px 56px;
+  }
+
+  .panel {
+    padding: 32px;
+  }
+
+  .results-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
