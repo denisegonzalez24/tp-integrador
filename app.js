@@ -1,13 +1,25 @@
-const BASE_URL = "https://datosabiertos-transporte-apis.buenosaires.gob.ar/colectivos";
+﻿const BASE_URL = "https://datosabiertos-transporte-apis.buenosaires.gob.ar/colectivos";
 const CLIENT_ID = "8251a8610a63446c9c090f6d04edc491";
 const CLIENT_SECRET = "b754F8057Ad54DA3a81eD95261d4A7EB";
 
-const loadButton = document.getElementById("loadButton");
-const resultsContainer = document.getElementById("results");
-const errorContainer = document.getElementById("error");
-const statusContainer = document.getElementById("status");
+let loadButton;
+let resultsContainer;
+let errorContainer;
+let statusContainer;
 
-loadButton.addEventListener("click", handleLoadLines);
+document.addEventListener("DOMContentLoaded", async () => {
+  await Promise.all([
+    loadComponent("navMount", "./components/nav.html"),
+    loadComponent("footerMount", "./components/footer.html")
+  ]);
+
+  bindElements();
+  setupNavigation();
+
+  if (loadButton) {
+    loadButton.addEventListener("click", handleLoadLines);
+  }
+});
 
 async function handleLoadLines() {
   setLoading(true);
@@ -17,10 +29,16 @@ async function handleLoadLines() {
     const data = await fetchVehicles();
     const lines = extractLines(data);
     renderLines(lines);
-    statusContainer.textContent = `Se encontraron ${lines.length} lineas unicas.`;
+
+    if (statusContainer) {
+      statusContainer.textContent = `Se encontraron ${lines.length} lineas unicas.`;
+    }
   } catch (error) {
     renderLines([]);
-    errorContainer.textContent = error.message || "No fue posible cargar las lineas.";
+
+    if (errorContainer) {
+      errorContainer.textContent = error.message || "No fue posible cargar las lineas.";
+    }
   } finally {
     setLoading(false);
   }
@@ -120,6 +138,10 @@ function isValidValue(value) {
 }
 
 function renderLines(lines) {
+  if (!resultsContainer) {
+    return;
+  }
+
   resultsContainer.innerHTML = "";
 
   if (!lines.length) {
@@ -140,15 +162,65 @@ function renderLines(lines) {
 }
 
 function clearMessages() {
-  errorContainer.textContent = "";
-  statusContainer.textContent = "";
+  if (errorContainer) {
+    errorContainer.textContent = "";
+  }
+
+  if (statusContainer) {
+    statusContainer.textContent = "";
+  }
 }
 
 function setLoading(isLoading) {
+  if (!loadButton) {
+    return;
+  }
+
   loadButton.disabled = isLoading;
   loadButton.textContent = isLoading ? "Cargando..." : "Cargar lineas";
 
-  if (isLoading) {
+  if (isLoading && statusContainer) {
     statusContainer.textContent = "Consultando API de transporte...";
   }
+}
+
+async function loadComponent(mountId, filePath) {
+  const mountNode = document.getElementById(mountId);
+
+  if (!mountNode) {
+    return;
+  }
+
+  try {
+    const response = await fetch(filePath);
+
+    if (!response.ok) {
+      throw new Error(`No se pudo cargar ${filePath}.`);
+    }
+
+    mountNode.innerHTML = await response.text();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function bindElements() {
+  loadButton = document.getElementById("loadButton");
+  resultsContainer = document.getElementById("results");
+  errorContainer = document.getElementById("error");
+  statusContainer = document.getElementById("status");
+}
+
+function setupNavigation() {
+  const toggle = document.getElementById("navToggle");
+  const menu = document.getElementById("navMenu");
+
+  if (!toggle || !menu) {
+    return;
+  }
+
+  toggle.addEventListener("click", () => {
+    const isOpen = menu.classList.toggle("is-open");
+    toggle.setAttribute("aria-expanded", String(isOpen));
+  });
 }

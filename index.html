@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -9,28 +9,44 @@
 </head>
 
 <body>
-  <main class="app">
-    <section class="panel">
-      <p class="eyebrow">Demo prueba fetch</p>
-      <h1>Viajero AMBA</h1>
-      <p class="description">
-        Demo simple para consultar lineas de colectivos detectadas en tiempo real
-        desde API oficial de transporte de Buenos Aires.
-      </p>
+  <div class="layout-shell">
+    <aside class="sidebar-shell" id="navMount"></aside>
 
-      <button id="loadButton" type="button">Cargar lineas</button>
+    <div class="content-shell">
+      <main class="app">
+        <section class="hero-card">
+          <div class="hero-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img" focusable="false">
+              <path d="M6 4h12a3 3 0 0 1 3 3v8a2 2 0 0 1-2 2v2a1 1 0 1 1-2 0v-2H7v2a1 1 0 1 1-2 0v-2a2 2 0 0 1-2-2V7a3 3 0 0 1 3-3Zm0 2a1 1 0 0 0-1 1v3h14V7a1 1 0 0 0-1-1Zm-1 9h14v-3H5Zm3-2.5a1 1 0 1 0 0 .001Zm8 0a1 1 0 1 0 0 .001Z" />
+            </svg>
+          </div>
+          <p class="eyebrow">Demo prueba fetch</p>
+          <h1>Viajero AMBA</h1>
+          <p class="description">
+            Consulta lineas de colectivos detectadas en tiempo real desde la API oficial
+            de transporte de Buenos Aires.
+          </p>
 
-      <p id="status" class="status" aria-live="polite"></p>
-      <p id="error" class="error" aria-live="assertive"></p>
+          <button id="loadButton" type="button">Cargar lineas</button>
 
-      <section class="results">
-        <h2>Lineas detectadas</h2>
-        <div id="results" class="results-list">
-          <p class="empty">Todavia no se cargaron lineas.</p>
-        </div>
-      </section>
-    </section>
-  </main>
+          <p id="status" class="status" aria-live="polite"></p>
+          <p id="error" class="error" aria-live="assertive"></p>
+        </section>
+
+        <section class="results-panel">
+          <div class="section-heading">
+            <h2>Lineas detectadas</h2>
+            <span class="section-note">Listado unico</span>
+          </div>
+          <div id="results" class="results-list">
+            <p class="empty">Todavia no se cargaron lineas.</p>
+          </div>
+        </section>
+      </main>
+
+      <div id="footerMount"></div>
+    </div>
+  </div>
 
   <script src="./app.js"></script>
 </body>
