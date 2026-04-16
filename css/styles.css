@@ -184,6 +184,18 @@ h1 {
   text-align: center;
 }
 
+.action-card-clickable {
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.action-card-clickable:hover,
+.action-card-clickable:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(0, 179, 126, 0.35);
+  box-shadow: 0 18px 28px rgba(0, 179, 126, 0.14);
+}
+
 .action-icon {
   width: 44px;
   height: 44px;
@@ -268,7 +280,7 @@ h1 {
 
 .line-card {
   border-radius: 28px;
-  background: #f8feff;
+  background: #f1f3f5;
   padding: 18px 18px 16px;
   margin-bottom: 14px;
 }
@@ -293,11 +305,6 @@ h1 {
   font-size: 0.9rem;
 }
 
-.line-action {
-  color: var(--accent-dark);
-  font-weight: 700;
-}
-
 .line-route,
 .line-meta {
   margin: 0;
@@ -307,6 +314,66 @@ h1 {
 
 .line-meta {
   margin-top: 4px;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.secondary-btn {
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: white;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.secondary-btn:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+@media (max-width: 430px) {
+  .view#view-colectivos .hero-card,
+  .view#view-buscar .hero-card {
+    padding-bottom: 18px;
+  }
+
+  .view#view-colectivos .hero-card .pagination-controls,
+  .view#view-buscar .hero-card .pagination-controls {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 16px;
+    align-items: center;
+  }
+
+  .view#view-colectivos .hero-card .pagination-controls button,
+  .view#view-buscar .hero-card .pagination-controls button,
+  .view#view-colectivos .hero-card .pagination-controls span,
+  .view#view-buscar .hero-card .pagination-controls span {
+    min-width: 0;
+  }
+
+  .view#view-colectivos .hero-card .pagination-controls button,
+  .view#view-buscar .hero-card .pagination-controls button {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  .view#view-colectivos .hero-card .pagination-controls span,
+  .view#view-buscar .hero-card .pagination-controls span {
+    text-align: center;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 .bottom-nav {
