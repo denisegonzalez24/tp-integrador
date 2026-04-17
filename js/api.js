@@ -1,9 +1,9 @@
-const BASE_URL = "https://datosabiertos-transporte-apis.buenosaires.gob.ar/colectivos";
+const API_HOST = "https://datosabiertos-transporte-apis.buenosaires.gob.ar";
 const CLIENT_ID = "8251a8610a63446c9c090f6d04edc491";
 const CLIENT_SECRET = "b754F8057Ad54DA3a81eD95261d4A7EB";
 
-function buildUrl(endpoint, params = {}) {
-  const url = new URL(`${BASE_URL}/${endpoint}`);
+function buildUrl(transportType, endpoint, params = {}) {
+  const url = new URL(`${API_HOST}/${transportType}/${endpoint}`);
   url.searchParams.set('client_id', CLIENT_ID);
   url.searchParams.set('client_secret', CLIENT_SECRET);
 
@@ -16,8 +16,8 @@ function buildUrl(endpoint, params = {}) {
   return url.toString();
 }
 
-export async function fetchTransportData(endpoint, params = {}) {
-  const url = buildUrl(endpoint, params);
+export async function fetchTransportData(transportType, endpoint, params = {}) {
+  const url = buildUrl(transportType, endpoint, params);
 
   const response = await fetch(url);
   if (!response.ok) {
@@ -28,9 +28,14 @@ export async function fetchTransportData(endpoint, params = {}) {
 }
 
 export async function getVehiclePositions() {
-  return await fetchTransportData('vehiclePositionsSimple');
+  return await fetchTransportData('colectivos', 'vehiclePositionsSimple');
 }
 
 export async function getArribosPorLinea(lineaId) {
-  return await fetchTransportData(`lineas/${lineaId}/arribos`);
+  return await fetchTransportData('colectivos', `lineas/${lineaId}/arribos`);
+}
+
+// Nueva función para Subtes (Devuelve JSON con próximos arribos)
+export async function getSubtesForecast() {
+  return await fetchTransportData('subtes', 'forecastGTFS');
 }

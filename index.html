@@ -36,7 +36,7 @@
             <div class="action-icon">🚆</div>
             <span>Trenes</span>
           </article>
-          <article class="action-card">
+          <article id="homeSubtesCard" class="action-card action-card-clickable" role="button" tabindex="0">
             <div class="action-icon">🚇</div>
             <span>Subtes</span>
           </article>
@@ -123,6 +123,44 @@
         </div>
       </section>
 
+      <section id="view-solo-colectivos" class="view">
+        <div class="hero-card">
+          <div class="hero-icon" aria-hidden="true">🚌</div>
+          <h2>Vista exclusiva de Colectivos</h2>
+          <p class="hero-text">Esta es una vista dedicada únicamente a los colectivos.</p>
+          <button id="soloColectivosBackBtn" class="link-button" type="button">← Volver</button>
+          <div id="soloColectivosList" class="results-list">
+            <p class="empty">Cargando líneas de colectivos...</p>
+          </div>
+          <div id="soloColectivosPagination" class="pagination-controls">
+            <button id="soloColectivosPrev10Btn" class="secondary-btn" type="button" disabled>–10</button>
+            <button id="soloColectivosPrevBtn" class="secondary-btn" type="button" disabled>-1</button>
+            <span id="soloColectivosPageLabel">1 de 43641</span>
+            <button id="soloColectivosNextBtn" class="secondary-btn" type="button" disabled>+1</button>
+            <button id="soloColectivosNext10Btn" class="secondary-btn" type="button" disabled>+10</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-subtes" class="view">
+        <div class="hero-card">
+          <div class="hero-icon" aria-hidden="true">🚇</div>
+          <h2>Subtes</h2>
+          <p class="hero-text">Próximos arribos y estado de la red de subtes.</p>
+          <button id="subtesBackBtn" class="link-button" type="button">← Volver</button>
+          <div id="subtesList" class="results-list">
+            <p class="empty">Cargando datos de subtes...</p>
+          </div>
+          <div id="subtesPagination" class="pagination-controls">
+            <button id="subtesPrev10Btn" class="secondary-btn" type="button" disabled>–10</button>
+            <button id="subtesPrevBtn" class="secondary-btn" type="button" disabled>-1</button>
+            <span id="subtesPageLabel">1 de 1</span>
+            <button id="subtesNextBtn" class="secondary-btn" type="button" disabled>+1</button>
+            <button id="subtesNext10Btn" class="secondary-btn" type="button" disabled>+10</button>
+          </div>
+        </div>
+      </section>
+
       <section id="view-buscar" class="view">
         <div class="hero-card">
           <h2>Buscar transporte</h2>
@@ -141,6 +179,17 @@
           </div>
         </div>
       </section>
+
+    <section id="view-detalle" class="view">
+      <div class="hero-card">
+        <button id="detalleBackBtn" class="link-button" type="button">← Volver</button>
+        <h2>Detalle del Colectivo</h2>
+        <p class="hero-text">Información en tiempo real de la unidad seleccionada.</p>
+        <div id="detalleContent" class="status-list" style="margin-top: 1rem;">
+          <!-- Detalle inyectado desde JS -->
+        </div>
+      </div>
+    </section>
 
       <section id="view-favoritos" class="view">
         <div class="hero-card">
