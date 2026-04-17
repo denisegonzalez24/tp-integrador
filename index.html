@@ -5,50 +5,248 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Viajero AMBA</title>
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./css/styles.css">
 </head>
 
 <body>
-  <div class="layout-shell">
-    <aside class="sidebar-shell" id="navMount"></aside>
-
-    <div class="content-shell">
-      <main class="app">
-        <section class="hero-card">
+  <header class="top-header" id="topHeader" aria-hidden="true">
+    <span class="top-header-title">Viajero AMBA</span>
+  </header>
+  <div class="app-shell">
+    <main id="appViews">
+      <section id="view-home" class="view active">
+        <header class="hero-card">
           <div class="hero-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" role="img" focusable="false">
-              <path d="M6 4h12a3 3 0 0 1 3 3v8a2 2 0 0 1-2 2v2a1 1 0 1 1-2 0v-2H7v2a1 1 0 1 1-2 0v-2a2 2 0 0 1-2-2V7a3 3 0 0 1 3-3Zm0 2a1 1 0 0 0-1 1v3h14V7a1 1 0 0 0-1-1Zm-1 9h14v-3H5Zm3-2.5a1 1 0 1 0 0 .001Zm8 0a1 1 0 1 0 0 .001Z" />
+              <path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Zm2 2v2h12V8H6Zm0 4v2h4v-2H6Zm8 0v2h4v-2h-4Zm-8 4h12v-2H6v2Z" />
             </svg>
           </div>
-          <p class="eyebrow">Demo prueba fetch</p>
+          <p class="eyebrow">Transporte público en tiempo real</p>
           <h1>Viajero AMBA</h1>
-          <p class="description">
-            Consulta lineas de colectivos detectadas en tiempo real desde la API oficial
-            de transporte de Buenos Aires.
-          </p>
+          <p class="hero-text">Consultá transporte público del AMBA en tiempo real desde tu teléfono.</p>
+          <button id="homeSearchBtn" class="primary-btn" type="button">Buscar transporte</button>
+        </header>
 
-          <button id="loadButton" type="button">Cargar lineas</button>
-
-          <p id="status" class="status" aria-live="polite"></p>
-          <p id="error" class="error" aria-live="assertive"></p>
+        <section class="quick-actions">
+          <article id="homeColectivosCard" class="action-card action-card-clickable" role="button" tabindex="0">
+            <div class="action-icon">🚌</div>
+            <span>Colectivos</span>
+          </article>
+          <article class="action-card">
+            <div class="action-icon">🚆</div>
+            <span>Trenes</span>
+          </article>
+          <article id="homeSubtesCard" class="action-card action-card-clickable" role="button" tabindex="0">
+            <div class="action-icon">🚇</div>
+            <span>Subtes</span>
+          </article>
+          <article class="action-card">
+            <div class="action-icon">⭐</div>
+            <span>Favoritos</span>
+          </article>
         </section>
 
-        <section class="results-panel">
-          <div class="section-heading">
-            <h2>Lineas detectadas</h2>
-            <span class="section-note">Listado unico</span>
+        <section class="status-panel">
+          <div class="panel-header">
+            <h2>Estado del servicio</h2>
           </div>
-          <div id="results" class="results-list">
-            <p class="empty">Todavia no se cargaron lineas.</p>
+          <div class="status-list">
+            <article class="status-item">
+              <div>
+                <p class="status-title">Colectivos</p>
+              </div>
+              <span class="status-chip status-ok">Normal</span>
+            </article>
+            <article class="status-item">
+              <div>
+                <p class="status-title">Trenes</p>
+              </div>
+              <span class="status-chip status-warning">Demorado</span>
+            </article>
+            <article class="status-item">
+              <div>
+                <p class="status-title">Subtes</p>
+              </div>
+              <span class="status-chip status-ok">Normal</span>
+            </article>
           </div>
         </section>
-      </main>
 
-      <div id="footerMount"></div>
-    </div>
+        <section class="featured-section">
+          <div class="featured-header">
+            <h2>Líneas destacadas</h2>
+            <a class="link-button" href="#">Ver todas →</a>
+          </div>
+
+          <article class="line-card">
+            <div class="line-card-main">
+              <div>
+                <p class="line-number">Línea 60</p>
+                <p class="line-subtitle">Colectivo · Normal</p>
+              </div>
+              <a class="line-action" href="#">Ver detalle</a>
+            </div>
+            <p class="line-route">Constitución – Tigre</p>
+            <p class="line-meta">CABA • GBA Norte • Hace 2 min</p>
+          </article>
+
+          <article class="line-card">
+            <div class="line-card-main">
+              <div>
+                <p class="line-number">Línea 152</p>
+                <p class="line-subtitle">Colectivo · Normal</p>
+              </div>
+              <a class="line-action" href="#">Ver detalle</a>
+            </div>
+            <p class="line-route">Puente Saavedra – La Boca</p>
+            <p class="line-meta">CABA • Hace 1 min</p>
+          </article>
+        </section>
+      </section>
+
+      <section id="view-colectivos" class="view">
+        <div class="hero-card">
+          <div class="hero-icon" aria-hidden="true">🚌</div>
+          <h2>Colectivos disponibles</h2>
+          <p class="hero-text">Seleccioná una línea para ver su recorrido y estado.</p>
+          <button id="colectivosBackBtn" class="link-button" type="button">← Volver</button>
+          <div id="colectivosList" class="results-list">
+            <p class="empty">Cargando líneas de colectivos...</p>
+          </div>
+          <div id="colectivosPagination" class="pagination-controls">
+            <button id="colectivosPrev10Btn" class="secondary-btn" type="button" disabled>–10</button>
+            <button id="colectivosPrevBtn" class="secondary-btn" type="button" disabled>-1</button>
+            <span id="colectivosPageLabel">1 de 43641</span>
+            <button id="colectivosNextBtn" class="secondary-btn" type="button" disabled>+1</button>
+            <button id="colectivosNext10Btn" class="secondary-btn" type="button" disabled>+10</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-solo-colectivos" class="view">
+        <div class="hero-card">
+          <div class="hero-icon" aria-hidden="true">🚌</div>
+          <h2>Vista exclusiva de Colectivos</h2>
+          <p class="hero-text">Esta es una vista dedicada únicamente a los colectivos.</p>
+          <button id="soloColectivosBackBtn" class="link-button" type="button">← Volver</button>
+          <div id="soloColectivosList" class="results-list">
+            <p class="empty">Cargando líneas de colectivos...</p>
+          </div>
+          <div id="soloColectivosPagination" class="pagination-controls">
+            <button id="soloColectivosPrev10Btn" class="secondary-btn" type="button" disabled>–10</button>
+            <button id="soloColectivosPrevBtn" class="secondary-btn" type="button" disabled>-1</button>
+            <span id="soloColectivosPageLabel">1 de 43641</span>
+            <button id="soloColectivosNextBtn" class="secondary-btn" type="button" disabled>+1</button>
+            <button id="soloColectivosNext10Btn" class="secondary-btn" type="button" disabled>+10</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-subtes" class="view">
+        <div class="hero-card">
+          <div class="hero-icon" aria-hidden="true">🚇</div>
+          <h2>Subtes</h2>
+          <p class="hero-text">Próximos arribos y estado de la red de subtes.</p>
+          <button id="subtesBackBtn" class="link-button" type="button">← Volver</button>
+          <div id="subtesList" class="results-list">
+            <p class="empty">Cargando datos de subtes...</p>
+          </div>
+          <div id="subtesPagination" class="pagination-controls">
+            <button id="subtesPrev10Btn" class="secondary-btn" type="button" disabled>–10</button>
+            <button id="subtesPrevBtn" class="secondary-btn" type="button" disabled>-1</button>
+            <span id="subtesPageLabel">1 de 1</span>
+            <button id="subtesNextBtn" class="secondary-btn" type="button" disabled>+1</button>
+            <button id="subtesNext10Btn" class="secondary-btn" type="button" disabled>+10</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-buscar" class="view">
+        <div class="hero-card">
+          <h2>Buscar transporte</h2>
+          <p class="hero-text">Presioná buscar para ver datos en tiempo real de la API.</p>
+          <div class="search-box">
+            <input id="searchInput" type="search" placeholder="Buscar..." />
+            <button id="searchButton" class="primary-btn" type="button">Buscar</button>
+          </div>
+          <div id="searchResults" class="results-list">
+            <p class="empty">Presioná buscar para cargar datos de la API.</p>
+          </div>
+          <div id="buscarPagination" class="pagination-controls">
+            <button id="buscarPrevBtn" class="secondary-btn" type="button" disabled>-1</button>
+            <span id="buscarPageLabel">1 de 1</span>
+            <button id="buscarNextBtn" class="secondary-btn" type="button" disabled>+1</button>
+          </div>
+        </div>
+      </section>
+
+    <section id="view-detalle" class="view">
+      <div class="hero-card">
+        <button id="detalleBackBtn" class="link-button" type="button">← Volver</button>
+        <h2>Detalle del Colectivo</h2>
+        <p class="hero-text">Información en tiempo real de la unidad seleccionada.</p>
+        <div id="detalleContent" class="status-list" style="margin-top: 1rem;">
+          <!-- Detalle inyectado desde JS -->
+        </div>
+      </div>
+    </section>
+
+      <section id="view-favoritos" class="view">
+        <div class="hero-card">
+          <h2>Favoritos</h2>
+          <p class="hero-text">Guardá tus líneas y paradas más usadas para acceder rápido.</p>
+          <div class="status-list">
+            <article class="status-item">
+              <p class="status-title">Aún no hay favoritos</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-historial" class="view">
+        <div class="hero-card">
+          <h2>Historial</h2>
+          <p class="hero-text">Tus búsquedas recientes aparecen acá.</p>
+          <div class="status-list">
+            <article class="status-item">
+              <p class="status-title">No hay historial todavía</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-contacto" class="view">
+        <div class="hero-card">
+          <h2>Contacto</h2>
+          <p class="hero-text">Escribinos para sugerencias o consultas sobre la app.</p>
+          <div class="status-list">
+            <article class="status-item">
+              <div>
+                <p class="status-title">Email</p>
+                <p class="line-meta">soporte@viajeroamba.com</p>
+              </div>
+            </article>
+            <article class="status-item">
+              <div>
+                <p class="status-title">Teléfono</p>
+                <p class="line-meta">+54 11 1234 5678</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
 
-  <script src="./app.js"></script>
+  <nav class="bottom-nav" aria-label="Navegación principal">
+    <a class="nav-link nav-link-active" href="#home" data-view="home">Inicio</a>
+    <a class="nav-link" href="#buscar" data-view="buscar">Buscar</a>
+    <a class="nav-link" href="#favoritos" data-view="favoritos">Favoritos</a>
+    <a class="nav-link" href="#historial" data-view="historial">Historial</a>
+    <a class="nav-link" href="#contacto" data-view="contacto">Contacto</a>
+  </nav>
+
+  <script type="module" src="./js/main.js"></script>
 </body>
 
 </html>
