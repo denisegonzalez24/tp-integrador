@@ -1,0 +1,6 @@
+[
+  { "route_id": "LineaA", "trip_id": "A11", "headsign": "Plaza de Mayo", "direction": 1 },
+  { "route_id": "LineaA", "trip_id": "A01", "headsign": "San Pedrito", "direction": 0 },
+  { "route_id": "LineaB", "trip_id": "B11", "headsign": "Leandro N. Alem", "direction": 1 },
+  { "route_id": "LineaB", "trip_id": "B01", "headsign": "Juan Manuel de Rosas", "direction": 0 }
+]

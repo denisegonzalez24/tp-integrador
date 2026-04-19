@@ -1,5 +1,7 @@
-﻿import { getVehiclePositions, getSubtesForecast } from './api.js';
+﻿import { getVehiclePositions } from './api.js';
 import { saveData, loadData } from './storage.js';
+import { fetchStaticSubteData, enrichSubteRealTimeData, generateTripStopListHTML } from './subtes.js';
+import { renderSubtes } from './ui.js';
 
 const TRANSPORT_DATA_KEY = 'transportData';
 const views = Array.from(document.querySelectorAll('.view'));
@@ -14,9 +16,8 @@ let buscarTransportData = [];
 let soloColectivosCurrentPage = 1;
 const SOLO_COLECTIVOS_PAGE_SIZE = 10;
 let soloColectivosTripData = [];
-let subtesCurrentPage = 1;
-const SUBTES_PAGE_SIZE = 10;
-let subtesDataArray = [];
+let staticSubteData = null;
+let subtesData = { Entity: [] };
 
 function getViewFromHash() {
   const hash = window.location.hash.slice(1).toLowerCase();
@@ -144,6 +145,7 @@ function renderColectivosLines(data, page = 1) {
     .map((item, index) => {
       const uniqueId = item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || `colectivo-${index}`;
       item._ui_id = uniqueId;
+      const routeName = item.route_short_name || 'N/A';
       const directionLabel = item.trip?.direction_id === '1' || item.trip?.direction_id === 1 ? 'vuelta' : 'ida';
       const serviceLabel = item.trip?.service_id === '2' || item.trip?.service_id === 2
         ? 'horario fin de semana'
@@ -151,10 +153,10 @@ function renderColectivosLines(data, page = 1) {
           ? 'días hábiles'
           : `servicio ${item.trip?.service_id || 'N/A'}`;
       return `
-        <button type="button" class="line-card" data-route="${item.route_short_name || ''}" data-trip-id="${uniqueId}" style="text-align: left; width: 100%; cursor: pointer; border: none; background: transparent; font-family: inherit; display: block;">
+        <button type="button" class="line-card" data-route="${routeName}" data-trip-id="${uniqueId}" style="text-align: left; width: 100%; cursor: pointer; border: none; background: transparent; font-family: inherit; display: block;">
           <div class="line-card-main">
             <div>
-              <p class="line-number">Línea ${item.route_short_name || 'N/A'}</p>
+              <p class="line-number">Línea ${routeName}</p>
               <p class="line-subtitle">${item.trip?.trip_headsign || 'Sin destino'} · ${directionLabel}</p>
             </div>
           </div>
@@ -214,6 +216,7 @@ function renderSoloColectivosLines(data, page = 1) {
     .map((item, index) => {
       const uniqueId = item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || `solo-colectivo-${index}`;
       item._ui_id = uniqueId;
+      const routeName = item.route_short_name || 'N/A';
       const directionLabel = item.trip?.direction_id === '1' || item.trip?.direction_id === 1 ? 'vuelta' : 'ida';
       const serviceLabel = item.trip?.service_id === '2' || item.trip?.service_id === 2
         ? 'horario fin de semana'
@@ -221,10 +224,10 @@ function renderSoloColectivosLines(data, page = 1) {
           ? 'días hábiles'
           : `servicio ${item.trip?.service_id || 'N/A'}`;
       return `
-        <button type="button" class="line-card" data-route="${item.route_short_name || ''}" data-trip-id="${uniqueId}" style="text-align: left; width: 100%; cursor: pointer; border: none; background: transparent; font-family: inherit; display: block;">
+        <button type="button" class="line-card" data-route="${routeName}" data-trip-id="${uniqueId}" style="text-align: left; width: 100%; cursor: pointer; border: none; background: transparent; font-family: inherit; display: block;">
           <div class="line-card-main">
             <div>
-              <p class="line-number">Línea ${item.route_short_name || 'N/A'}</p>
+              <p class="line-number">Línea ${routeName}</p>
               <p class="line-subtitle">${item.trip?.trip_headsign || 'Sin destino'} · ${directionLabel}</p>
             </div>
           </div>
@@ -243,111 +246,6 @@ async function openSoloColectivosView() {
   soloColectivosCurrentPage = 1;
   renderSoloColectivosLines(transportData, soloColectivosCurrentPage);
   navigateTo('solo-colectivos');
-}
-
-function getSubtesPageData(page = 1) {
-  const startIndex = (page - 1) * SUBTES_PAGE_SIZE;
-  return subtesDataArray.slice(startIndex, startIndex + SUBTES_PAGE_SIZE);
-}
-
-function updateSubtesPaginationControls() {
-  const prev10Btn = document.getElementById('subtesPrev10Btn');
-  const prevBtn = document.getElementById('subtesPrevBtn');
-  const nextBtn = document.getElementById('subtesNextBtn');
-  const next10Btn = document.getElementById('subtesNext10Btn');
-  const pageLabel = document.getElementById('subtesPageLabel');
-  const totalPages = Math.max(1, Math.ceil(subtesDataArray.length / SUBTES_PAGE_SIZE));
-
-  if (prev10Btn) prev10Btn.disabled = subtesCurrentPage <= 1;
-  if (prevBtn) prevBtn.disabled = subtesCurrentPage <= 1;
-  if (nextBtn) nextBtn.disabled = subtesCurrentPage >= totalPages;
-  if (next10Btn) next10Btn.disabled = subtesCurrentPage >= totalPages;
-  if (pageLabel) pageLabel.textContent = `${subtesCurrentPage} de ${totalPages}`;
-}
-
-function renderSubtesLines(data, page = 1) {
-  const listContainer = document.getElementById('subtesList');
-  if (!listContainer) return;
-
-  // Normalizamos los datos (la API puede devolver un array directo o dentro de "entity")
-  let normalizedData = [];
-  if (Array.isArray(data)) {
-    normalizedData = data;
-  } else if (data && Array.isArray(data.entity)) {
-    normalizedData = data.entity;
-  } else if (data && Array.isArray(data.Entity)) {
-    normalizedData = data.Entity;
-  }
-
-  subtesDataArray = normalizedData;
-  subtesCurrentPage = page;
-
-  if (subtesDataArray.length === 0) {
-    listContainer.innerHTML = '<p class="empty">No se encontraron datos de subtes.</p>';
-    updateSubtesPaginationControls();
-    return;
-  }
-
-  const pageData = getSubtesPageData(subtesCurrentPage);
-
-  listContainer.innerHTML = pageData.map((item, index) => {
-    const tripUpdate = item.trip_update || item.tripUpdate || {};
-    const vehicle = item.vehicle || item.Vehicle || {};
-    const trip = tripUpdate.trip || vehicle.trip || item.trip || {};
-    const linea = item.linea || item.Linea || {};
-    
-    let routeName = trip.route_id || trip.routeId || item.route_id || item.routeId || linea.route_Id || linea.route_id || 'Subte';
-    const displayRoute = routeName.replace(/l[ií]nea/i, '').replace(/_/g, ' ').trim();
-    const tripId = trip.trip_id || trip.tripId || item.trip_id || item.tripId || '';
-    const uniqueId = item.id || tripId || `subte-${index}`;
-    item._ui_id = uniqueId;
-
-    let arrivalText = 'Arribos en tiempo real';
-    const stopTimeUpdates = tripUpdate.stop_time_update || tripUpdate.stopTimeUpdate;
-
-    if (stopTimeUpdates && stopTimeUpdates.length > 0) {
-      // Tomamos la primera parada de la lista de actualizaciones
-      const firstUpdate = stopTimeUpdates[0];
-      const arrivalTime = firstUpdate.arrival?.time || firstUpdate.departure?.time;
-
-      if (arrivalTime) {
-        const date = new Date(arrivalTime * 1000); // Convertir de segundos a milisegundos
-        const now = new Date();
-        const diffMins = Math.round((date - now) / 60000); // Diferencia en minutos
-
-        if (diffMins <= 0) {
-          arrivalText = 'Llegando...';
-        } else if (diffMins < 60) {
-          arrivalText = `Próximo arribo en ${diffMins} min`;
-        } else {
-          arrivalText = `Próximo arribo: ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-        }
-      }
-    }
-
-    return `
-      <button type="button" class="line-card" data-route="${routeName}" data-trip-id="${uniqueId}" style="text-align: left; width: 100%; cursor: pointer; border: none; background: transparent; font-family: inherit; display: block;">
-        <div class="line-card-main">
-          <div>
-            <p class="line-number">Línea ${displayRoute === 'Subte' ? 'Subte' : displayRoute}</p>
-            <p class="line-subtitle">Subte ${tripId ? `· Viaje ${tripId}` : ''}</p>
-          </div>
-        </div>
-        <p class="line-route">${arrivalText}</p>
-      </button>
-    `;
-  }).join('');
-
-  updateSubtesPaginationControls();
-}
-
-async function openSubtesView() {
-  const subtesList = document.getElementById('subtesList');
-  if (subtesList) subtesList.innerHTML = '<p class="empty">Cargando datos de subtes...</p>';
-  navigateTo('subtes');
-  const data = await getSubtesForecast().catch(err => console.error(err));
-  subtesCurrentPage = 1;
-  renderSubtesLines(data || [], subtesCurrentPage);
 }
 
 function renderSearchResults(data, page = 1) {
@@ -401,6 +299,30 @@ function renderSearchResults(data, page = 1) {
 function renderLineDetails(data) {
   const container = document.getElementById('detalleContent');
   if (!container) return;
+
+  // Detectar si es un subte (posee la propiedad Linea de nuestro mock)
+  if (data?.Linea) {
+    const routeId = data.Linea.Route_Id || 'Subte';
+    const tripId = data.Linea.Trip_Id || 'Desconocido';
+    const headsign = data.Linea.headsign || 'Desconocido';
+    const stopListHTML = generateTripStopListHTML(tripId, staticSubteData);
+
+    container.innerHTML = `
+      <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+        <p class="status-title" style="font-size: 1.25rem;">Línea ${routeId.replace('Linea', '')}</p>
+        <p class="line-subtitle">Destino: ${headsign}</p>
+      </article>
+      <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+        <p class="status-title">Información del Viaje</p>
+        <p class="line-meta"><strong>ID Viaje:</strong> ${tripId}</p>
+      </article>
+      <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px; width: 100%;">
+        <p class="status-title">Itinerario y Paradas</p>
+        ${stopListHTML}
+      </article>
+    `;
+    return;
+  }
 
   const tripUpdate = data?.trip_update || data?.tripUpdate || {};
   const vehicle = data?.vehicle || data?.Vehicle || {};
@@ -466,18 +388,18 @@ function handleLineClick(event) {
     case 'soloColectivosList':
       dataArray = soloColectivosTripData;
       break;
-    case 'subtesList':
-      dataArray = subtesDataArray;
-      break;
     case 'searchResults':
       dataArray = buscarTransportData;
+      break;
+    case 'subtesList':
+      dataArray = subtesData.Entity || subtesData.entity || [];
       break;
     default:
       console.error('No se pudo determinar la lista de origen.');
       return;
   }
 
-  const lineData = dataArray.find(item => String(item._ui_id) === tripId || String(item.id || item.trip?.trip_id || item.trip_id) === tripId);
+  const lineData = dataArray.find(item => String(item._ui_id) === tripId || String(item.id || item.trip?.trip_id || item.trip_id || item.Linea?.Trip_Id) === tripId);
 
   if (lineData) {
     renderLineDetails(lineData);
@@ -516,16 +438,6 @@ function initHeaderOnScroll() {
   window.addEventListener('scroll', updateHeader);
 }
 
-async function testSubtesAPI() {
-  try {
-    console.log('Iniciando prueba de la API de Subtes...');
-    const subtesData = await getSubtesForecast();
-    console.log('✅ Éxito - Datos de Subtes obtenidos:', subtesData);
-  } catch (error) {
-    console.error('❌ Error al obtener datos de Subtes:', error);
-  }
-}
-
 window.addEventListener('hashchange', async () => {
   const viewName = getViewFromHash();
   setActiveView(viewName);
@@ -533,6 +445,7 @@ window.addEventListener('hashchange', async () => {
     const transportData = await ensureTransportData();
     renderViewForName(viewName, transportData);
   }
+
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -540,27 +453,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   setActiveView(getViewFromHash());
   initHeaderOnScroll();
 
-  testSubtesAPI(); // Llamada de prueba para verificar subtes
+  staticSubteData = await fetchStaticSubteData();
 
   const homeSearchBtn = document.getElementById('homeSearchBtn');
   const searchButton = document.getElementById('searchButton');
   const searchInput = document.getElementById('searchInput');
   const homeColectivosCard = document.getElementById('homeColectivosCard');
+  const homeSubtesCard = document.getElementById('homeSubtesCard');
   const colectivosBackBtn = document.getElementById('colectivosBackBtn');
   const colectivosPrevBtn = document.getElementById('colectivosPrevBtn');
   const colectivosNextBtn = document.getElementById('colectivosNextBtn');
-  const homeSubtesCard = document.getElementById('homeSubtesCard');
 
   const colectivosList = document.getElementById('colectivosList');
   const soloColectivosList = document.getElementById('soloColectivosList');
-  const subtesList = document.getElementById('subtesList');
   const searchResults = document.getElementById('searchResults');
   const detalleBackBtn = document.getElementById('detalleBackBtn');
+  const subtesBackBtn = document.getElementById('subtesBackBtn');
+  const subtesList = document.getElementById('subtesList');
 
   colectivosList?.addEventListener('click', handleLineClick);
   soloColectivosList?.addEventListener('click', handleLineClick);
-  subtesList?.addEventListener('click', handleLineClick);
   searchResults?.addEventListener('click', handleLineClick);
+  subtesList?.addEventListener('click', handleLineClick);
 
   detalleBackBtn?.addEventListener('click', () => {
     window.history.back(); // Volver a la vista anterior preservando su estado
@@ -583,6 +497,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       openSoloColectivosView();
     }
   });
+
+  async function openSubtesView() {
+    navigateTo('subtes');
+    if (staticSubteData) {
+      try {
+        const mockResponse = await fetch('./mock/mock_subtes.json').then(r => r.json());
+        subtesData = enrichSubteRealTimeData(mockResponse, staticSubteData);
+        renderSubtes(subtesData, 'subtesList');
+      } catch (e) {
+        console.error('Error cargando mock de subtes:', e);
+      }
+    }
+  }
 
   homeSubtesCard?.addEventListener('click', openSubtesView);
   homeSubtesCard?.addEventListener('keydown', event => {
@@ -669,38 +596,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Controles de Subtes
-  const subtesBackBtn = document.getElementById('subtesBackBtn');
-  const subtesPrevBtn = document.getElementById('subtesPrevBtn');
-  const subtesNextBtn = document.getElementById('subtesNextBtn');
-  const subtesPrev10Btn = document.getElementById('subtesPrev10Btn');
-  const subtesNext10Btn = document.getElementById('subtesNext10Btn');
-
-  subtesBackBtn?.addEventListener('click', () => navigateTo('home'));
-
-  subtesPrevBtn?.addEventListener('click', () => {
-    if (subtesCurrentPage > 1) {
-      subtesCurrentPage -= 1;
-      renderSubtesLines(subtesDataArray, subtesCurrentPage);
-    }
+  subtesBackBtn?.addEventListener('click', () => {
+    navigateTo('home');
   });
-  subtesNextBtn?.addEventListener('click', () => {
-    const totalPages = Math.max(1, Math.ceil(subtesDataArray.length / SUBTES_PAGE_SIZE));
-    if (subtesCurrentPage < totalPages) {
-      subtesCurrentPage += 1;
-      renderSubtesLines(subtesDataArray, subtesCurrentPage);
-    }
-  });
-  subtesPrev10Btn?.addEventListener('click', () => {
-    subtesCurrentPage = Math.max(1, subtesCurrentPage - 10);
-    renderSubtesLines(subtesDataArray, subtesCurrentPage);
-  });
-  subtesNext10Btn?.addEventListener('click', () => {
-    const totalPages = Math.max(1, Math.ceil(subtesDataArray.length / SUBTES_PAGE_SIZE));
-    subtesCurrentPage = Math.min(totalPages, subtesCurrentPage + 10);
-    renderSubtesLines(subtesDataArray, subtesCurrentPage);
-  });
-
 
   if (getViewFromHash() === 'colectivos') {
     renderColectivosLines(transportData, colectivosCurrentPage);

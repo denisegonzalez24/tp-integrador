@@ -34,8 +34,3 @@ export async function getVehiclePositions() {
 export async function getArribosPorLinea(lineaId) {
   return await fetchTransportData('colectivos', `lineas/${lineaId}/arribos`);
 }
-
-// Nueva función para Subtes (Devuelve JSON con próximos arribos)
-export async function getSubtesForecast() {
-  return await fetchTransportData('subtes', 'forecastGTFS');
-}

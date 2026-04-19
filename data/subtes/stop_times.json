@@ -1,0 +1,23 @@
+[
+  {
+    "trip_id": "A11",
+    "stops": [
+      { "stop_id": "1059N", "arrival": "12:00:00", "sequence": 1 },
+      { "stop_id": "1060N", "arrival": "12:01:45", "sequence": 2 },
+      { "stop_id": "1061N", "arrival": "12:03:41", "sequence": 3 },
+      { "stop_id": "1062N", "arrival": "12:05:34", "sequence": 4 },
+      { "stop_id": "1064N", "arrival": "12:09:03", "sequence": 6 },
+      { "stop_id": "1071N", "arrival": "12:19:56", "sequence": 12 },
+      { "stop_id": "1076N", "arrival": "12:25:53", "sequence": 17 }
+    ]
+  },
+  {
+    "trip_id": "A01",
+    "stops": [
+      { "stop_id": "1076S", "arrival": "12:00:00", "sequence": 1 },
+      { "stop_id": "1071S", "arrival": "12:05:57", "sequence": 6 },
+      { "stop_id": "1064S", "arrival": "12:16:50", "sequence": 12 },
+      { "stop_id": "1059S", "arrival": "12:25:53", "sequence": 17 }
+    ]
+  }
+]

@@ -1,0 +1,8 @@
+[
+  { "id": "LineaA", "short_name": "A", "long_name": "Plaza de Mayo - San Pedrito", "color": "A5C8FF" },
+  { "id": "LineaB", "short_name": "B", "long_name": "Leandro N. Alem - Juan Manuel de Rosas", "color": "FF0000" },
+  { "id": "LineaC", "short_name": "C", "long_name": "Retiro - Constitución", "color": "0000FF" },
+  { "id": "LineaD", "short_name": "D", "long_name": "Catedral - Congreso de Tucumán", "color": "00AC67" },
+  { "id": "LineaE", "short_name": "E", "long_name": "Retiro - Plaza de los Virreyes", "color": "8300BB" },
+  { "id": "LineaH", "short_name": "H", "long_name": "Facultad de Derecho - Hospitales", "color": "FFF300" }
+]
