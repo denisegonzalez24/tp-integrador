@@ -1,4 +1,6 @@
 
+import { loadData } from './storage.js';
+
 export function renderSubtes(data, containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -11,12 +13,17 @@ export function renderSubtes(data, containerId) {
         return;
     }
 
+    const favs = loadData('favoriteTransportItems') || [];
+
     const cardsHTML = entities.map(item => {
         // Adaptación para el mock JSON y formato estándar GTFS
         const linea = item.Linea || {};
         const routeId = linea.Route_Id || item.route_id || 'Subte';
         const tripId = linea.Trip_Id || item.ID || 'Desconocido';
         
+        const favoriteId = `subtes:${String(routeId).toLowerCase()}:${String(tripId).toLowerCase()}`;
+        const isFav = favs.some(f => f.favoriteId === favoriteId);
+
         // Buscamos 'stop_time_update' como solicitaste, o 'Estaciones' del mock
         const estaciones = item.stop_time_update || linea.Estaciones || [];
 
@@ -34,15 +41,20 @@ export function renderSubtes(data, containerId) {
         }).join('');
 
         return `
-            <button type="button" class="line-card" data-trip-id="${tripId}" style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px; cursor: pointer; border: none; background: transparent; font-family: inherit; width: 100%; text-align: left;">
-                <div class="line-card-main" style="width: 100%;">
-                    <div>
-                        <p class="line-number">${routeId}</p>
-                        <p class="line-subtitle">Viaje: ${tripId}</p>
+            <article class="line-card transport-card" data-trip-id="${tripId}" data-source="subtes" style="position: relative;">
+                <button type="button" class="transport-card-main" data-card-action="open" style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px; cursor: pointer; border: none; background: transparent; font-family: inherit; width: 100%; text-align: left;">
+                    <div class="line-card-main" style="width: 100%;">
+                        <div>
+                            <p class="line-number">${routeId}</p>
+                            <p class="line-subtitle">Viaje: ${tripId}</p>
+                        </div>
                     </div>
-                </div>
-                <div style="width: 100%; display: flex; flex-direction: column; gap: 4px;">${estacionesHTML || '<p class="line-meta">No hay estaciones listadas.</p>'}</div>
-            </button>
+                    <div style="width: 100%; display: flex; flex-direction: column; gap: 4px;">${estacionesHTML || '<p class="line-meta">No hay estaciones listadas.</p>'}</div>
+                </button>
+                <button type="button" class="favorite-toggle ${isFav ? 'is-active' : ''}" data-card-action="favorite" aria-pressed="${isFav}" aria-label="${isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}" style="position: absolute; right: 16px; top: 16px;">
+                    ${isFav ? '★' : '☆'}
+                </button>
+            </article>
         `;
     }).join('');
 
