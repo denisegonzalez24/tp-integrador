@@ -1,10 +1,9 @@
 ﻿import { getVehiclePositions } from './api.js';
-import { saveData, loadData } from './storage.js';
-import { fetchStaticSubteData, enrichSubteRealTimeData, generateTripStopListHTML } from './subtes.js';
-import { renderSubtes } from './ui.js';
+import { saveData, loadData, toggleFavoriteItem, removeFavoriteItem, getFavoriteItems } from './storage.js';
+import { fetchStaticSubteData, enrichSubteRealTimeData } from './subtes.js';
+import { renderFavoritesView, renderColectivosLines, renderSoloColectivosLines, renderSubtesLines, renderSearchResults, renderLineDetails, renderSubtes } from './ui.js';
 
 const TRANSPORT_DATA_KEY = 'transportData';
-const FAVORITES_STORAGE_KEY = 'favoriteTransportItems';
 const views = Array.from(document.querySelectorAll('.view'));
 const navLinks = Array.from(document.querySelectorAll('.bottom-nav .nav-link'));
 const validViews = views.map(view => view.id.replace('view-', ''));
@@ -22,7 +21,6 @@ let subtesData = { Entity: [] };
 let subtesCurrentPage = 1;
 const SUBTES_PAGE_SIZE = 10;
 let subtesDataArray = [];
-let favoriteItems = loadFavoriteItems();
 let currentDetailData = null;
 let currentDetailSource = null;
 
@@ -48,70 +46,6 @@ function navigateTo(viewName) {
   window.location.hash = target;
 }
 
-function loadFavoriteItems() {
-  const storedFavorites = loadData(FAVORITES_STORAGE_KEY);
-  return Array.isArray(storedFavorites) ? storedFavorites : [];
-}
-
-function persistFavoriteItems() {
-  saveData(FAVORITES_STORAGE_KEY, favoriteItems);
-}
-
-function getFavoriteItemId(data, source) {
-  const tripUpdate = data?.trip_update || data?.tripUpdate || {};
-  const vehicle = data?.vehicle || data?.Vehicle || {};
-  const trip = tripUpdate.trip || vehicle.trip || data?.trip || {};
-  const routeName = String(data?.route_short_name || data?.route_id || data?.routeId || trip.route_id || trip.routeId || data?.linea?.route_Id || data?.linea?.route_id || 'sin-linea').trim().toLowerCase();
-  const tripId = String(trip.trip_id || trip.tripId || data?.trip_id || data?.tripId || data?.id || '').trim().toLowerCase();
-  const vehicleId = String(vehicle.vehicle?.id || vehicle.id || '').trim().toLowerCase();
-
-  return `${source}:${routeName}:${tripId || vehicleId || 'item'}`;
-}
-
-function isFavoriteItem(data, source) {
-  const favoriteId = getFavoriteItemId(data, source);
-  return favoriteItems.some(item => item.favoriteId === favoriteId);
-}
-
-function buildFavoriteRecord(data, source) {
-  const tripUpdate = data?.trip_update || data?.tripUpdate || {};
-  const vehicle = data?.vehicle || data?.Vehicle || {};
-  const trip = tripUpdate.trip || vehicle.trip || data?.trip || {};
-  const routeShortName = data?.route_short_name || data?.route_id || data?.routeId || trip.route_id || trip.routeId || data?.linea?.route_Id || data?.linea?.route_id || 'Sin línea';
-  const routeLongName = data?.route_long_name || trip.route_long_name || trip.routeLongName || '';
-  const headsign = trip.trip_headsign || trip.tripHeadsign || data?.trip?.trip_headsign || 'Sin destino';
-  const favoriteId = getFavoriteItemId(data, source);
-
-  return {
-    favoriteId,
-    source,
-    savedAt: new Date().toISOString(),
-    title: source === 'subtes' ? `Subte ${String(routeShortName).replace(/l[ií]nea/i, '').replace(/_/g, ' ').trim()}` : `Línea ${routeShortName}`,
-    subtitle: routeLongName || headsign,
-    data,
-  };
-}
-
-function toggleFavoriteItem(data, source) {
-  const favoriteId = getFavoriteItemId(data, source);
-  const existingIndex = favoriteItems.findIndex(item => item.favoriteId === favoriteId);
-
-  if (existingIndex >= 0) {
-    favoriteItems = favoriteItems.filter(item => item.favoriteId !== favoriteId);
-  } else {
-    favoriteItems = [buildFavoriteRecord(data, source), ...favoriteItems];
-  }
-
-  persistFavoriteItems();
-  refreshFavoriteAwareViews();
-}
-
-function removeFavoriteItem(favoriteId) {
-  favoriteItems = favoriteItems.filter(item => item.favoriteId !== favoriteId);
-  persistFavoriteItems();
-  refreshFavoriteAwareViews();
-}
-
 function getActiveListData(listId) {
   switch (listId) {
     case 'colectivosList':
@@ -119,95 +53,12 @@ function getActiveListData(listId) {
     case 'soloColectivosList':
       return { data: soloColectivosTripData, source: 'solo-colectivos' };
     case 'subtesList':
-      return { data: subtesData.Entity || subtesData.entity || [], source: 'subtes' };
       return { data: subtesDataArray, source: 'subtes' };
     case 'searchResults':
       return { data: buscarTransportData, source: 'buscar' };
     default:
       return { data: [], source: 'desconocido' };
   }
-}
-
-function getItemTripId(item) {
-  return item?._ui_id || item?.id || item?.trip?.trip_id || item?.trip_id || item?.vehicle?.vehicle?.id || item?.vehicle?.id || '';
-}
-
-function renderFavoriteToggleButton(item, source) {
-  const favoriteActive = isFavoriteItem(item, source);
-  return `
-    <button type="button" class="favorite-toggle ${favoriteActive ? 'is-active' : ''}" data-card-action="favorite" aria-pressed="${favoriteActive}" aria-label="${favoriteActive ? 'Quitar de favoritos' : 'Agregar a favoritos'}">
-      ${favoriteActive ? '★' : '☆'}
-    </button>
-  `;
-}
-
-function renderTransportCard({ item, source, title, subtitle, metaLines = [], routeLine = '' }) {
-  const uniqueId = getItemTripId(item) || `${source}-${Math.random().toString(16).slice(2)}`;
-
-  return `
-    <article class="line-card transport-card" data-trip-id="${uniqueId}" data-source="${source}">
-      <button type="button" class="transport-card-main" data-card-action="open">
-        <div class="line-card-main">
-          <div>
-            <p class="line-number">${title}</p>
-            <p class="line-subtitle">${subtitle}</p>
-          </div>
-        </div>
-        ${routeLine ? `<p class="line-route">${routeLine}</p>` : ''}
-        ${metaLines.map(line => `<p class="line-meta">${line}</p>`).join('')}
-      </button>
-      ${renderFavoriteToggleButton(item, source)}
-    </article>
-  `;
-}
-
-function renderFavoriteCard(record) {
-  const favoriteData = record?.data || {};
-  const title = record?.title || 'Favorito';
-  const subtitle = record?.subtitle || 'Guardado en favoritos';
-  const routeName = favoriteData?.route_short_name || favoriteData?.route_id || favoriteData?.routeId || favoriteData?.trip?.route_id || favoriteData?.trip?.routeId || favoriteData?.linea?.route_Id || favoriteData?.linea?.route_id || 'Sin línea';
-  const vehicle = favoriteData?.vehicle || favoriteData?.Vehicle || {};
-  const lat = vehicle.position?.latitude;
-  const lon = vehicle.position?.longitude;
-
-  return `
-    <article class="status-item favorite-item" data-favorite-id="${record.favoriteId}">
-      <button type="button" class="favorite-item-main" data-card-action="open-favorite">
-        <p class="status-title">${title}</p>
-        <p class="line-subtitle">${subtitle}</p>
-        <p class="line-meta">${routeName}${lat !== undefined && lon !== undefined ? ` • Lat ${lat.toFixed(4)} • Lon ${lon.toFixed(4)}` : ''}</p>
-      </button>
-      <div class="favorite-item-actions">
-        <button type="button" class="secondary-btn" data-card-action="remove-favorite">Quitar</button>
-      </div>
-    </article>
-  `;
-}
-
-function renderFavoritesView() {
-  const favoritesSection = document.getElementById('view-favoritos');
-  if (!favoritesSection) return;
-
-  favoritesSection.innerHTML = `
-    <div class="hero-card">
-      <div class="hero-icon" aria-hidden="true">⭐</div>
-      <h2>Favoritos</h2>
-      <p class="hero-text">Guardá tus líneas y paradas más usadas para acceder rápido.</p>
-      ${favoriteItems.length === 0
-      ? `
-          <div class="empty-state">
-            <p class="status-title">Aún no hay favoritos</p>
-            <p class="line-subtitle">Abrí una línea, revisá su detalle y marcala como favorita.</p>
-            <button type="button" class="primary-btn favorite-cta" data-favorites-action="browse-colectivos">Ver colectivos</button>
-          </div>
-        `
-      : `
-          <div id="favoritesList" class="status-list favorites-list">
-            ${favoriteItems.map(renderFavoriteCard).join('')}
-          </div>
-        `}
-    </div>
-  `;
 }
 
 function refreshFavoriteAwareViews() {
@@ -234,23 +85,21 @@ function refreshFavoriteAwareViews() {
   }
 
   if (currentView === 'detalle' && currentDetailData) {
-    renderLineDetails(currentDetailData, currentDetailSource || 'detalle');
+    renderLineDetails(currentDetailData, currentDetailSource || 'detalle', staticSubteData);
   }
 }
 
 function renderViewForName(viewName, transportData) {
   switch (viewName) {
     case 'colectivos':
-      if (transportData) {
-        renderColectivosLines(transportData, colectivosCurrentPage);
-      } else if (colectivosTripData.length > 0) {
+      if (transportData) colectivosTripData = transportData;
+      if (colectivosTripData.length > 0) {
         renderColectivosLines(colectivosTripData, colectivosCurrentPage);
       }
       break;
     case 'solo-colectivos':
-      if (transportData) {
-        renderSoloColectivosLines(transportData, soloColectivosCurrentPage);
-      } else if (soloColectivosTripData.length > 0) {
+      if (transportData) soloColectivosTripData = transportData;
+      if (soloColectivosTripData.length > 0) {
         renderSoloColectivosLines(soloColectivosTripData, soloColectivosCurrentPage);
       }
       break;
@@ -269,7 +118,7 @@ function renderViewForName(viewName, transportData) {
       break;
     case 'detalle':
       if (currentDetailData) {
-        renderLineDetails(currentDetailData, currentDetailSource || 'detalle');
+        renderLineDetails(currentDetailData, currentDetailSource || 'detalle', staticSubteData);
       }
       break;
     default:
@@ -325,322 +174,20 @@ function parseTripsContent(text) {
   });
 }
 
-
-function getBuscarPageData(page = 1) {
-  const startIndex = (page - 1) * BUSCAR_PAGE_SIZE;
-  return buscarTransportData.slice(startIndex, startIndex + BUSCAR_PAGE_SIZE);
-}
-
-function getColectivosPageData(page = 1) {
-  const startIndex = (page - 1) * COLECTIVOS_PAGE_SIZE;
-  return colectivosTripData.slice(startIndex, startIndex + COLECTIVOS_PAGE_SIZE);
-}
-
-function updateBuscarPaginationControls() {
-  const prevBtn = document.getElementById('buscarPrevBtn');
-  const nextBtn = document.getElementById('buscarNextBtn');
-  const pageLabel = document.getElementById('buscarPageLabel');
-  const totalPages = Math.max(1, Math.ceil(buscarTransportData.length / BUSCAR_PAGE_SIZE));
-
-  if (prevBtn) prevBtn.disabled = buscarCurrentPage <= 1;
-  if (nextBtn) nextBtn.disabled = buscarCurrentPage >= totalPages;
-  if (pageLabel) pageLabel.textContent = `${buscarCurrentPage} de ${totalPages}`;
-}
-
-function updateColectivosPaginationControls() {
-  const prev10Btn = document.getElementById('colectivosPrev10Btn');
-  const prevBtn = document.getElementById('colectivosPrevBtn');
-  const nextBtn = document.getElementById('colectivosNextBtn');
-  const next10Btn = document.getElementById('colectivosNext10Btn');
-  const pageLabel = document.getElementById('colectivosPageLabel');
-  const totalPages = Math.max(1, Math.ceil(colectivosTripData.length / COLECTIVOS_PAGE_SIZE));
-
-  if (prev10Btn) prev10Btn.disabled = colectivosCurrentPage <= 1;
-  if (prevBtn) prevBtn.disabled = colectivosCurrentPage <= 1;
-  if (nextBtn) nextBtn.disabled = colectivosCurrentPage >= totalPages;
-  if (next10Btn) next10Btn.disabled = colectivosCurrentPage >= totalPages;
-  if (pageLabel) pageLabel.textContent = `${colectivosCurrentPage} de ${totalPages}`;
-}
-
-function renderColectivosLines(data, page = 1) {
-  const listContainer = document.getElementById('colectivosList');
-  if (!listContainer) return;
-
-  colectivosTripData = data || [];
-  colectivosCurrentPage = page;
-
-  if (!Array.isArray(colectivosTripData) || colectivosTripData.length === 0) {
-    listContainer.innerHTML = '<p class="empty">No se encontraron líneas de colectivos.</p>';
-    updateColectivosPaginationControls();
-    return;
-  }
-
-  const pageData = getColectivosPageData(colectivosCurrentPage);
-
-  listContainer.innerHTML = pageData
-    .map((item, index) => {
-      const uniqueId = item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || `colectivo-${index}`;
-      item._ui_id = uniqueId;
-      const routeName = item.route_short_name || 'N/A';
-      const directionLabel = item.trip?.direction_id === '1' || item.trip?.direction_id === 1 ? 'vuelta' : 'ida';
-      const serviceLabel = item.trip?.service_id === '2' || item.trip?.service_id === 2
-        ? 'horario fin de semana'
-        : item.trip?.service_id === '1' || item.trip?.service_id === 1
-          ? 'días hábiles'
-          : `servicio ${item.trip?.service_id || 'N/A'}`;
-
-      return renderTransportCard({
-        item,
-        source: 'colectivos',
-        title: `Línea ${item.route_short_name || 'N/A'}`,
-        subtitle: `${item.trip?.trip_headsign || 'Sin destino'} · ${directionLabel}`,
-        routeLine: `Viaje ${item.trip?.trip_id || item.id || 'N/A'} • ${serviceLabel}`,
-        metaLines: [
-          `Posición: Lat ${item.vehicle?.position?.latitude?.toFixed(4) || 'N/A'} • Lon ${item.vehicle?.position?.longitude?.toFixed(4) || 'N/A'}`,
-        ],
-      });
-    })
-    .join('');
-
-  updateColectivosPaginationControls();
-}
-
 async function openColectivosView() {
   const transportData = await ensureTransportData();
   colectivosCurrentPage = 1;
-  renderColectivosLines(transportData, colectivosCurrentPage);
+  colectivosTripData = transportData || [];
+  renderColectivosLines(colectivosTripData, colectivosCurrentPage);
   navigateTo('colectivos');
-}
-
-function getSoloColectivosPageData(page = 1) {
-  const startIndex = (page - 1) * SOLO_COLECTIVOS_PAGE_SIZE;
-  return soloColectivosTripData.slice(startIndex, startIndex + SOLO_COLECTIVOS_PAGE_SIZE);
-}
-
-function updateSoloColectivosPaginationControls() {
-  const prev10Btn = document.getElementById('soloColectivosPrev10Btn');
-  const prevBtn = document.getElementById('soloColectivosPrevBtn');
-  const nextBtn = document.getElementById('soloColectivosNextBtn');
-  const next10Btn = document.getElementById('soloColectivosNext10Btn');
-  const pageLabel = document.getElementById('soloColectivosPageLabel');
-  const totalPages = Math.max(1, Math.ceil(soloColectivosTripData.length / SOLO_COLECTIVOS_PAGE_SIZE));
-
-  if (prev10Btn) prev10Btn.disabled = soloColectivosCurrentPage <= 1;
-  if (prevBtn) prevBtn.disabled = soloColectivosCurrentPage <= 1;
-  if (nextBtn) nextBtn.disabled = soloColectivosCurrentPage >= totalPages;
-  if (next10Btn) next10Btn.disabled = soloColectivosCurrentPage >= totalPages;
-  if (pageLabel) pageLabel.textContent = `${soloColectivosCurrentPage} de ${totalPages}`;
-}
-
-function renderSoloColectivosLines(data, page = 1) {
-  const listContainer = document.getElementById('soloColectivosList');
-  if (!listContainer) return;
-
-  soloColectivosTripData = data || [];
-  soloColectivosCurrentPage = page;
-
-  if (!Array.isArray(soloColectivosTripData) || soloColectivosTripData.length === 0) {
-    listContainer.innerHTML = '<p class="empty">No se encontraron líneas de colectivos.</p>';
-    updateSoloColectivosPaginationControls();
-    return;
-  }
-
-  const pageData = getSoloColectivosPageData(soloColectivosCurrentPage);
-
-  listContainer.innerHTML = pageData
-    .map((item, index) => {
-      const uniqueId = item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || `solo-colectivo-${index}`;
-      item._ui_id = uniqueId;
-      const routeName = item.route_short_name || 'N/A';
-      const directionLabel = item.trip?.direction_id === '1' || item.trip?.direction_id === 1 ? 'vuelta' : 'ida';
-      const serviceLabel = item.trip?.service_id === '2' || item.trip?.service_id === 2
-        ? 'horario fin de semana'
-        : item.trip?.service_id === '1' || item.trip?.service_id === 1
-          ? 'días hábiles'
-          : `servicio ${item.trip?.service_id || 'N/A'}`;
-
-      return renderTransportCard({
-        item,
-        source: 'solo-colectivos',
-        title: `Línea ${item.route_short_name || 'N/A'}`,
-        subtitle: `${item.trip?.trip_headsign || 'Sin destino'} · ${directionLabel}`,
-        routeLine: `Viaje ${item.trip?.trip_id || item.id || 'N/A'} • ${serviceLabel}`,
-        metaLines: [
-          `Posición: Lat ${item.vehicle?.position?.latitude?.toFixed(4) || 'N/A'} • Lon ${item.vehicle?.position?.longitude?.toFixed(4) || 'N/A'}`,
-        ],
-      });
-    })
-    .join('');
-
-  updateSoloColectivosPaginationControls();
 }
 
 async function openSoloColectivosView() {
   const transportData = await ensureTransportData();
   soloColectivosCurrentPage = 1;
-  renderSoloColectivosLines(transportData, soloColectivosCurrentPage);
+  soloColectivosTripData = transportData || [];
+  renderSoloColectivosLines(soloColectivosTripData, soloColectivosCurrentPage);
   navigateTo('solo-colectivos');
-}
-
-function getSubtesPageData(page = 1) {
-  const startIndex = (page - 1) * SUBTES_PAGE_SIZE;
-  return subtesDataArray.slice(startIndex, startIndex + SUBTES_PAGE_SIZE);
-}
-
-function updateSubtesPaginationControls() {
-  const prev10Btn = document.getElementById('subtesPrev10Btn');
-  const prevBtn = document.getElementById('subtesPrevBtn');
-  const nextBtn = document.getElementById('subtesNextBtn');
-  const next10Btn = document.getElementById('subtesNext10Btn');
-  const pageLabel = document.getElementById('subtesPageLabel');
-  const totalPages = Math.max(1, Math.ceil(subtesDataArray.length / SUBTES_PAGE_SIZE));
-
-  if (prev10Btn) prev10Btn.disabled = subtesCurrentPage <= 1;
-  if (prevBtn) prevBtn.disabled = subtesCurrentPage <= 1;
-  if (nextBtn) nextBtn.disabled = subtesCurrentPage >= totalPages;
-  if (next10Btn) next10Btn.disabled = subtesCurrentPage >= totalPages;
-  if (pageLabel) pageLabel.textContent = `${subtesCurrentPage} de ${totalPages}`;
-}
-
-function renderSubtesLines(data, page = 1) {
-  let normalizedData = [];
-  if (Array.isArray(data)) normalizedData = data;
-  else if (data && Array.isArray(data.entity)) normalizedData = data.entity;
-  else if (data && Array.isArray(data.Entity)) normalizedData = data.Entity;
-
-  subtesDataArray = normalizedData;
-  subtesCurrentPage = page;
-
-  const pageData = getSubtesPageData(subtesCurrentPage);
-  renderSubtes({ Entity: pageData }, 'subtesList');
-  updateSubtesPaginationControls();
-}
-
-function renderSearchResults(data, page = 1) {
-  const resultsContainer = document.getElementById('searchResults');
-  if (!resultsContainer) return;
-
-  buscarTransportData = data || [];
-  buscarCurrentPage = page;
-
-  if (!Array.isArray(buscarTransportData) || buscarTransportData.length === 0) {
-    resultsContainer.innerHTML = '<p class="empty">No se encontraron resultados.</p>';
-    updateBuscarPaginationControls();
-    return;
-  }
-
-  const pageData = getBuscarPageData(buscarCurrentPage);
-
-  resultsContainer.innerHTML = pageData.map((item, index) => {
-    const routeName = item?.route_short_name || item?.route_id || 'Sin línea';
-    const routeLongName = item?.route_long_name || item?.trip?.route_long_name || '';
-    const meta = item?.vehicle?.position
-      ? `Lat ${item.vehicle.position.latitude.toFixed(4)} • Lon ${item.vehicle.position.longitude.toFixed(4)}`
-      : '';
-    const uniqueId = item.id || item?.trip?.trip_id || item?.trip_id || item?.vehicle?.vehicle?.id || `buscar-${index}`;
-    item._ui_id = uniqueId;
-    const serviceId = item?.trip?.service_id || item?.service_id || '';
-    const directionId = item?.trip?.direction_id || item?.direction_id || '';
-    const vehicleId = item?.vehicle?.vehicle?.id || item?.vehicle?.id || '';
-
-    return renderTransportCard({
-      item,
-      source: 'buscar',
-      title: routeName,
-      subtitle: 'Colectivo · Datos de API',
-      routeLine: routeLongName,
-      metaLines: [
-        uniqueId ? `ID: ${uniqueId}` : '',
-        serviceId ? `Service ID: ${serviceId}` : '',
-        directionId ? `Direction ID: ${directionId}` : '',
-        vehicleId ? `Vehicle ID: ${vehicleId}` : '',
-        meta,
-      ].filter(Boolean),
-    });
-  }).join('');
-
-  updateBuscarPaginationControls();
-}
-
-function renderLineDetails(data, source = 'detalle') {
-  const container = document.getElementById('detalleContent');
-  if (!container) return;
-
-  currentDetailData = data;
-  currentDetailSource = source;
-
-  // Detectar si es un subte (posee la propiedad Linea de nuestro mock)
-  if (data?.Linea) {
-    const routeId = data.Linea.Route_Id || 'Subte';
-    const tripId = data.Linea.Trip_Id || 'Desconocido';
-    const headsign = data.Linea.headsign || 'Desconocido';
-    const stopListHTML = generateTripStopListHTML(tripId, staticSubteData);
-    const favoriteActive = isFavoriteItem(data, source);
-
-    container.innerHTML = `
-      <div class="detail-actions">
-        <button type="button" class="secondary-btn ${favoriteActive ? 'favorite-active' : ''}" data-card-action="favorite-detail" aria-pressed="${favoriteActive}">${favoriteActive ? 'Quitar de favoritos' : 'Guardar en favoritos'}</button>
-      </div>
-      <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-        <p class="status-title" style="font-size: 1.25rem;">Línea ${routeId.replace('Linea', '')}</p>
-        <p class="line-subtitle">Destino: ${headsign}</p>
-      </article>
-      <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-        <p class="status-title">Información del Viaje</p>
-        <p class="line-meta"><strong>ID Viaje:</strong> ${tripId}</p>
-      </article>
-      <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px; width: 100%;">
-        <p class="status-title">Itinerario y Paradas</p>
-        ${stopListHTML}
-      </article>
-    `;
-    return;
-  }
-
-  const tripUpdate = data?.trip_update || data?.tripUpdate || {};
-  const vehicle = data?.vehicle || data?.Vehicle || {};
-  const trip = tripUpdate.trip || vehicle.trip || data?.trip || {};
-  const linea = data?.linea || data?.Linea || {};
-
-  let routeName = data?.route_short_name || data?.route_id || data?.routeId || trip.route_id || trip.routeId || linea.route_Id || linea.route_id;
-  let tripHeadsign = trip.trip_headsign || trip.tripHeadsign || data?.trip?.trip_headsign || 'Sin destino';
-  let directionId = trip.direction_id !== undefined ? trip.direction_id : (trip.directionId !== undefined ? trip.directionId : data?.trip?.direction_id);
-  let directionLabel = directionId === '1' || directionId === 1 ? 'Vuelta' : 'Ida';
-  let lat = vehicle.position?.latitude;
-  let lon = vehicle.position?.longitude;
-  let speed = vehicle.position?.speed;
-  let tripId = trip.trip_id || trip.tripId || data?.trip_id || data?.tripId || 'N/A';
-  let vehicleId = vehicle.vehicle?.id || vehicle.id || 'N/A';
-
-  if (tripUpdate.trip || vehicle.trip) {
-    tripHeadsign = tripHeadsign === 'Sin destino' ? 'Subte' : tripHeadsign;
-    if (directionId === undefined) directionLabel = '';
-  }
-
-  routeName = routeName || 'Sin línea';
-  const displayRoute = routeName.replace(/l[ií]nea/i, '').replace(/_/g, ' ').trim();
-  const favoriteActive = isFavoriteItem(data, source);
-
-  container.innerHTML = `
-    <div class="detail-actions">
-      <button type="button" class="secondary-btn ${favoriteActive ? 'favorite-active' : ''}" data-card-action="favorite-detail" aria-pressed="${favoriteActive}">${favoriteActive ? 'Quitar de favoritos' : 'Guardar en favoritos'}</button>
-    </div>
-    <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-      <p class="status-title" style="font-size: 1.25rem;">Línea ${displayRoute === 'Sin línea' ? 'Sin línea' : displayRoute}</p>
-      <p class="line-subtitle">${tripHeadsign}${directionLabel ? ` · ${directionLabel}` : ''}</p>
-    </article>
-    <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-      <p class="status-title">Información del Vehículo</p>
-      <p class="line-meta"><strong>ID Vehículo:</strong> ${vehicleId}</p>
-      <p class="line-meta"><strong>ID Viaje:</strong> ${tripId}</p>
-      <p class="line-meta"><strong>Velocidad:</strong> ${speed !== undefined ? (speed * 3.6).toFixed(1) + ' km/h' : 'N/A'}</p>
-    </article>
-    <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-      <p class="status-title">Ubicación Actual</p>
-      <p class="line-meta"><strong>Latitud:</strong> ${lat !== undefined ? lat.toFixed(5) : 'N/A'}</p>
-      <p class="line-meta"><strong>Longitud:</strong> ${lon !== undefined ? lon.toFixed(5) : 'N/A'}</p>
-    </article>
-  `;
 }
 
 function handleLineClick(event) {
@@ -655,7 +202,7 @@ function handleLineClick(event) {
   if (action === 'favorite-detail') {
     if (currentDetailData) {
       toggleFavoriteItem(currentDetailData, currentDetailSource || 'detalle');
-      renderLineDetails(currentDetailData, currentDetailSource || 'detalle');
+      refreshFavoriteAwareViews();
     }
     return;
   }
@@ -666,18 +213,22 @@ function handleLineClick(event) {
       return;
     }
 
+    const favoriteItems = getFavoriteItems();
     const favoriteRecord = favoriteItems.find(item => item.favoriteId === favoriteCard.dataset.favoriteId);
     if (!favoriteRecord) {
       return;
     }
 
     if (action === 'open-favorite') {
-      renderLineDetails(favoriteRecord.data, favoriteRecord.source || 'favoritos');
+      currentDetailData = favoriteRecord.data;
+      currentDetailSource = favoriteRecord.source || 'favoritos';
+      renderLineDetails(currentDetailData, currentDetailSource, staticSubteData);
       navigateTo('detalle');
     }
 
     if (action === 'remove-favorite') {
       removeFavoriteItem(favoriteRecord.favoriteId);
+      refreshFavoriteAwareViews();
     }
     return;
   }
@@ -703,6 +254,7 @@ function handleLineClick(event) {
     const lineData = dataArray.find(item => String(item._ui_id) === tripId || String(item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || item.vehicle?.id || item.Linea?.Trip_Id) === tripId);
     if (lineData) {
       toggleFavoriteItem(lineData, source);
+      refreshFavoriteAwareViews();
     }
     return;
   }
@@ -710,7 +262,9 @@ function handleLineClick(event) {
   const lineData = dataArray.find(item => String(item._ui_id) === tripId || String(item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || item.vehicle?.id || item.Linea?.Trip_Id) === tripId);
 
   if (lineData) {
-    renderLineDetails(lineData, source);
+    currentDetailData = lineData;
+    currentDetailSource = source;
+    renderLineDetails(lineData, source, staticSubteData);
     navigateTo('detalle');
   } else {
     console.warn(`No se encontró información para el viaje con ID: ${tripId}`);
@@ -825,9 +379,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       try {
         const mockResponse = await fetch('./mock/mock_subtes.json').then(r => r.json());
         subtesData = enrichSubteRealTimeData(mockResponse, staticSubteData);
+        subtesDataArray = subtesData.Entity || subtesData.entity || [];
         renderSubtes(subtesData, 'subtesList');
         subtesCurrentPage = 1;
-        renderSubtesLines(subtesData, subtesCurrentPage);
+        renderSubtesLines(subtesDataArray, subtesCurrentPage);
       } catch (e) {
         console.error('Error cargando mock de subtes:', e);
       }
@@ -966,7 +521,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     buscarCurrentPage = 1;
-    renderSearchResults(allData, buscarCurrentPage);
+    buscarTransportData = allData;
+    renderSearchResults(buscarTransportData, buscarCurrentPage);
   });
 
   const buscarPrevBtn = document.getElementById('buscarPrevBtn');
