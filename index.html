@@ -33,7 +33,7 @@
             <div class="action-icon">🚌</div>
             <span>Colectivos</span>
           </article>
-          <article class="action-card">
+          <article id="homeTrenesCard" class="action-card action-card-clickable" role="button" tabindex="0">
             <div class="action-icon">🚆</div>
             <span>Trenes</span>
           </article>
@@ -162,16 +162,34 @@
         </div>
       </section>
 
+      <section id="view-trenes" class="view">
+        <div class="hero-card">
+          <div class="hero-icon" aria-hidden="true">🚆</div>
+          <h2>Líneas de Trenes</h2>
+          <p class="hero-text">Seleccioná una línea para ver sus ramales y estado del servicio.</p>
+          <button id="trenesBackBtn" class="link-button" type="button">← Volver al inicio</button>
+          <div id="trenesList" class="results-list">
+            <p class="empty">Cargando líneas de trenes...</p>
+          </div>
+        </div>
+      </section>
+
       <section id="view-buscar" class="view">
         <div class="hero-card">
+          <button id="buscarBackBtn" class="link-button" type="button">← Volver al inicio</button>
           <h2>Buscar transporte</h2>
-          <p class="hero-text">Presioná buscar para ver datos en tiempo real de la API.</p>
+          <p class="hero-text">Elegí el tipo y buscá en trenes, colectivos y subtes.</p>
+          <div id="searchTypeFilters" class="search-type-filters" role="tablist" aria-label="Tipo de transporte">
+            <button type="button" class="search-type-btn" data-search-type="colectivos">Colectivos</button>
+            <button type="button" class="search-type-btn is-active" data-search-type="trenes">Trenes</button>
+            <button type="button" class="search-type-btn" data-search-type="subtes">Subtes</button>
+          </div>
           <div class="search-box">
-            <input id="searchInput" type="search" placeholder="Buscar..." />
+            <input id="searchInput" type="search" placeholder="Buscar línea, estación o destino" />
             <button id="searchButton" class="primary-btn" type="button">Buscar</button>
           </div>
           <div id="searchResults" class="results-list">
-            <p class="empty">Presioná buscar para cargar datos de la API.</p>
+            <p class="empty">Seleccioná un tipo y buscá para ver resultados.</p>
           </div>
           <div id="buscarPagination" class="pagination-controls">
             <button id="buscarPrevBtn" class="secondary-btn" type="button" disabled>-1</button>

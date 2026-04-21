@@ -1,6 +1,7 @@
 const API_HOST = "https://datosabiertos-transporte-apis.buenosaires.gob.ar";
 const CLIENT_ID = "8251a8610a63446c9c090f6d04edc491";
 const CLIENT_SECRET = "b754F8057Ad54DA3a81eD95261d4A7EB";
+const TRENES_API_HOST = "https://ariedro.dev/api-trenes";
 
 function buildUrl(transportType, endpoint, params = {}) {
   const url = new URL(`${API_HOST}/${transportType}/${endpoint}`);
@@ -38,4 +39,43 @@ export async function getArribosPorLinea(lineaId) {
 // Nueva función para Subtes (Devuelve JSON con próximos arribos)
 export async function getSubtesForecast() {
   return await fetchTransportData('subtes', 'forecastGTFS');
+}
+
+function buildTrenesUrl(path, params = {}) {
+  const url = new URL(`${TRENES_API_HOST}/${path}`);
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      url.searchParams.set(key, value);
+    }
+  });
+
+  return url.toString();
+}
+
+async function fetchTrenesData(path, params = {}) {
+  const url = buildTrenesUrl(path, params);
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Error HTTP ${response.status} - ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+export async function getTrainStationsByName(nombre) {
+  return await fetchTrenesData('infraestructura/estaciones', { nombre });
+}
+
+export async function getTrainStationsByRamal(idRamal) {
+  return await fetchTrenesData('infraestructura/estaciones', { idRamal });
+}
+
+export async function getTrainArrivalsByStation(idEstacion, cantidad = 5) {
+  return await fetchTrenesData(`arribos/estacion/${idEstacion}`, { cantidad });
+}
+
+export async function getTrainRamales() {
+  return await fetchTrenesData('infraestructura/ramales', {});
 }
