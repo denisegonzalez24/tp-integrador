@@ -1,0 +1,136 @@
+[
+    {
+        "id": 17,
+        "id_gerencia": 11,
+        "nombre": "Constitucion-Alejandro Korn",
+        "estaciones": 15,
+        "orden_ramal": 1,
+        "cabecera_inicial": {
+            "nombre": "Constitucion"
+        },
+        "cabecera_final": {
+            "nombre": "Alejandro Korn"
+        },
+        "alerta": []
+    },
+    {
+        "id": 13,
+        "id_gerencia": 11,
+        "nombre": "Constitucion-Bosques-Q",
+        "estaciones": 14,
+        "orden_ramal": 2,
+        "cabecera_inicial": {
+            "nombre": "Constitucion"
+        },
+        "cabecera_final": {
+            "nombre": "Bosques"
+        },
+        "alerta": [
+            {
+                "id": 1
+            }
+        ]
+    },
+    {
+        "id": 15,
+        "id_gerencia": 11,
+        "nombre": "Constitucion-Bosques-T",
+        "estaciones": 12,
+        "orden_ramal": 3,
+        "cabecera_inicial": {
+            "nombre": "Constitucion"
+        },
+        "cabecera_final": {
+            "nombre": "Bosques"
+        },
+        "alerta": [
+            {
+                "id": 1
+            }
+        ]
+    },
+    {
+        "id": 31,
+        "id_gerencia": 1,
+        "nombre": "Once-Moreno",
+        "estaciones": 18,
+        "orden_ramal": 1,
+        "cabecera_inicial": {
+            "nombre": "Once"
+        },
+        "cabecera_final": {
+            "nombre": "Moreno"
+        },
+        "alerta": []
+    },
+    {
+        "id": 141,
+        "id_gerencia": 5,
+        "nombre": "Retiro-Tigre",
+        "estaciones": 18,
+        "orden_ramal": 1,
+        "cabecera_inicial": {
+            "nombre": "Retiro"
+        },
+        "cabecera_final": {
+            "nombre": "Tigre"
+        },
+        "alerta": []
+    },
+    {
+        "id": 151,
+        "id_gerencia": 5,
+        "nombre": "Retiro-Bme. Mitre",
+        "estaciones": 12,
+        "orden_ramal": 2,
+        "cabecera_inicial": {
+            "nombre": "Retiro"
+        },
+        "cabecera_final": {
+            "nombre": "Bme. Mitre"
+        },
+        "alerta": []
+    },
+    {
+        "id": 131,
+        "id_gerencia": 31,
+        "nombre": "Retiro-Pilar",
+        "estaciones": 21,
+        "orden_ramal": 1,
+        "cabecera_inicial": {
+            "nombre": "Retiro"
+        },
+        "cabecera_final": {
+            "nombre": "Pilar"
+        },
+        "alerta": []
+    },
+    {
+        "id": 211,
+        "id_gerencia": 21,
+        "nombre": "Dr. Saenz-Gonzalez Catan",
+        "estaciones": 17,
+        "orden_ramal": 1,
+        "cabecera_inicial": {
+            "nombre": "Dr. Saenz"
+        },
+        "cabecera_final": {
+            "nombre": "Gonzalez Catan"
+        },
+        "alerta": []
+    },
+    {
+        "id": 411,
+        "id_gerencia": 41,
+        "nombre": "Maipu-Delta",
+        "estaciones": 11,
+        "orden_ramal": 1,
+        "cabecera_inicial": {
+            "nombre": "Maipu"
+        },
+        "cabecera_final": {
+            "nombre": "Delta"
+        },
+        "alerta": []
+    }
+]

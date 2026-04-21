@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle de estacion | Viajero AMBA</title>
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+
+<body>
+    <div class="app-shell">
+        <main>
+            <section class="view active">
+                <div class="hero-card">
+                    <button id="detailBackBtn" class="link-button" type="button">← Volver</button>
+                    <h2>Detalle de estacion</h2>
+                    <p class="hero-text">Primero ves a que hora pasa cada tren y en cuanto llega; en cada desplegable
+                        ves el recorrido completo con horarios.</p>
+                    <div id="detailState" class="status-list" style="margin-top: 1rem;">
+                        <p class="empty">Cargando detalle...</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module" src="./js/detail.js"></script>
+</body>
+
+</html>
