@@ -32,6 +32,10 @@ export async function getVehiclePositions() {
   return await fetchTransportData('colectivos', 'vehiclePositionsSimple');
 }
 
+export async function getVehiclePositionsDetailed(params = {}) {
+  return await fetchTransportData('colectivos', 'vehiclePositions', { json: 1, ...params });
+}
+
 export async function getArribosPorLinea(lineaId) {
   return await fetchTransportData('colectivos', `lineas/${lineaId}/arribos`);
 }
@@ -72,8 +76,8 @@ export async function getTrainStationsByRamal(idRamal) {
   return await fetchTrenesData('infraestructura/estaciones', { idRamal });
 }
 
-export async function getTrainArrivalsByStation(idEstacion, cantidad = 5) {
-  return await fetchTrenesData(`arribos/estacion/${idEstacion}`, { cantidad });
+export async function getTrainArrivalsByStation(idEstacion, cantidad = 5, sentido = null) {
+  return await fetchTrenesData(`arribos/estacion/${idEstacion}`, { cantidad, sentido });
 }
 
 export async function getTrainRamales() {

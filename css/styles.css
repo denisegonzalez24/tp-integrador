@@ -189,6 +189,37 @@ h1 {
   box-shadow: 0 0 0 3px rgba(0, 179, 126, 0.12);
 }
 
+#filtros-dinamicos {
+  margin-top: 14px;
+}
+
+.search-dynamic-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.search-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.search-filter-select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #f8fcff;
+  color: var(--text);
+}
+
+.search-filter-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 179, 126, 0.12);
+}
+
 .quick-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -258,6 +289,27 @@ h1 {
 .featured-section h2 {
   margin: 0;
   font-size: 1rem;
+}
+
+.home-history-section {
+  margin-bottom: 18px;
+}
+
+.home-history-card {
+  margin-bottom: 0;
+}
+
+.home-history-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(0, 179, 126, 0.12);
+  color: var(--accent-dark);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .status-list {

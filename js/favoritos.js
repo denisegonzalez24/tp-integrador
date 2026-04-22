@@ -171,7 +171,7 @@ export function handleFavoritesClick(event) {
         if (favoriteRecord.source === 'buscar') {
             const stationId = favoriteRecord.data?.id_estacion || favoriteRecord.data?.id;
             if (stationId) {
-                ctx.openStationDetail?.(stationId);
+                ctx.openStationDetail?.(stationId, favoriteRecord.data);
             }
         } else {
             ctx.openTransportDetail?.(favoriteRecord.data, favoriteRecord.source || 'favoritos');

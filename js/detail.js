@@ -1,5 +1,12 @@
 import { getTrainArrivalsByStation } from './api.js';
 
+const ARRIVALS_COUNT = 5;
+
+let currentStationId = '';
+let currentSentido = 'todos';
+let destinoSeleccionado = 'Todos';
+let currentArrivals = [];
+
 function normalizeArrivalsResponse(payload) {
     if (Array.isArray(payload)) {
         return payload;
@@ -156,6 +163,12 @@ function getArrivalDestination(item) {
         || 'Sin destino';
 }
 
+function getArrivalFilterDestination(item) {
+    return item?.servicio?.ramal?.cabeceraFinal?.nombre
+        || getArrivalDestination(item)
+        || 'Sin destino';
+}
+
 function getArrivalTime(item) {
     return item?.horario
         || item?.hora
@@ -167,12 +180,159 @@ function getArrivalTime(item) {
         || secondsToDisplayTime(item?.arribo?.segundos);
 }
 
-export async function getArrivals(id) {
+function renderSentidoFilters() {
+    return `
+        <div class="train-search-actions" style="margin: 16px 0 4px;">
+            <button type="button" class="secondary-btn ${currentSentido === 'todos' ? 'favorite-active' : ''}" data-sentido-filter="todos">Todos</button>
+            <button type="button" class="secondary-btn ${currentSentido === '1' ? 'favorite-active' : ''}" data-sentido-filter="1">Ida</button>
+            <button type="button" class="secondary-btn ${currentSentido === '2' ? 'favorite-active' : ''}" data-sentido-filter="2">Vuelta</button>
+        </div>
+    `;
+}
+
+function getUniqueDestinos(list = []) {
+    return Array.from(
+        new Set(
+            (Array.isArray(list) ? list : [])
+                .map(getArrivalFilterDestination)
+                .filter(Boolean),
+        ),
+    );
+}
+
+export function renderFiltros(destinos = []) {
+    const uniqueDestinos = ['Todos', ...destinos];
+
+    return `
+        <div class="train-search-actions" style="margin: 8px 0 16px; flex-wrap: wrap;">
+            ${uniqueDestinos.map(destino => `
+                <button
+                    type="button"
+                    class="secondary-btn filtro-btn ${destino === destinoSeleccionado ? 'active favorite-active' : ''}"
+                    data-destino="${destino}"
+                >
+                    ${destino}
+                </button>
+            `).join('')}
+        </div>
+    `;
+}
+
+function bindSentidoFilters() {
+    const buttons = Array.from(document.querySelectorAll('[data-sentido-filter]'));
+
+    buttons.forEach(button => {
+        button.addEventListener('click', async () => {
+            const nextSentido = button.dataset.sentidoFilter || 'todos';
+            if (nextSentido === currentSentido) {
+                return;
+            }
+
+            currentSentido = nextSentido;
+            await cargarArribos(currentStationId, currentSentido);
+        });
+    });
+}
+
+function bindDestinoFilters() {
+    const buttons = Array.from(document.querySelectorAll('[data-destino]'));
+
+    buttons.forEach(button => {
+        button.addEventListener('click', () => {
+            const nextDestino = button.dataset.destino || 'Todos';
+            if (nextDestino === destinoSeleccionado) {
+                return;
+            }
+
+            destinoSeleccionado = nextDestino;
+            activarBoton(button);
+            aplicarFiltro();
+        });
+    });
+}
+
+export function activarBoton(botonActivo) {
+    const buttons = Array.from(document.querySelectorAll('.filtro-btn'));
+
+    buttons.forEach(button => {
+        const isActive = button === botonActivo;
+        button.classList.toggle('active', isActive);
+        button.classList.toggle('favorite-active', isActive);
+    });
+}
+
+function renderDetailLayout(arrivals) {
+    const detailState = document.getElementById('detailState');
+    if (!detailState) {
+        return;
+    }
+
+    const destinos = getUniqueDestinos(currentArrivals);
+
+    detailState.innerHTML = `
+        ${renderSentidoFilters()}
+        ${renderFiltros(destinos)}
+        <div id="arrivalsResults">
+            ${renderArrivals(arrivals)}
+        </div>
+    `;
+
+    bindSentidoFilters();
+    bindDestinoFilters();
+}
+
+export function aplicarFiltro() {
+    const filteredArrivals = destinoSeleccionado === 'Todos'
+        ? currentArrivals
+        : currentArrivals.filter(item => getArrivalFilterDestination(item) === destinoSeleccionado);
+
+    renderDetailLayout(filteredArrivals);
+}
+
+function renderLoadingState() {
+    const detailState = document.getElementById('detailState');
+    if (!detailState) {
+        return;
+    }
+
+    detailState.innerHTML = `
+        ${renderSentidoFilters()}
+        <p class="empty">Cargando arribos...</p>
+    `;
+
+    bindSentidoFilters();
+}
+
+export async function cargarArribos(id, sentido = 'todos') {
+    currentStationId = String(id || '');
+    currentSentido = sentido || 'todos';
+
+    if (!currentStationId) {
+        renderNotFoundState('');
+        return [];
+    }
+
+    renderLoadingState();
+
     try {
-        const payload = await getTrainArrivalsByStation(id, 2);
-        return normalizeArrivalsResponse(payload);
+        const payload = await getTrainArrivalsByStation(
+            currentStationId,
+            ARRIVALS_COUNT,
+            currentSentido === 'todos' ? null : currentSentido,
+        );
+        currentArrivals = normalizeArrivalsResponse(payload);
+
+        const destinosDisponibles = getUniqueDestinos(currentArrivals);
+        if (destinoSeleccionado !== 'Todos' && !destinosDisponibles.includes(destinoSeleccionado)) {
+            destinoSeleccionado = 'Todos';
+        }
+
+        renderStationArrivals(currentArrivals);
+        return currentArrivals;
     } catch (error) {
         console.error('Error al cargar arribos:', error);
+        currentArrivals = [];
+        renderRequestErrorState();
         return [];
     }
 }
@@ -228,15 +388,27 @@ export function renderArrivals(list) {
     </div>
   `;
 }
+
 function renderStationArrivals(arrivals) {
+    currentArrivals = Array.isArray(arrivals) ? arrivals : [];
+    aplicarFiltro();
+}
+
+function renderRequestErrorState() {
     const detailState = document.getElementById('detailState');
     if (!detailState) {
         return;
     }
 
     detailState.innerHTML = `
-        ${renderArrivals(arrivals)}
+    ${renderSentidoFilters()}
+    <article class="status-item" style="align-items: flex-start; flex-direction: column; gap: 8px;">
+      <p class="status-title">No se pudieron cargar los arribos</p>
+      <p class="line-meta">Intenta nuevamente en unos instantes.</p>
+    </article>
   `;
+
+    bindSentidoFilters();
 }
 
 function renderNotFoundState(stationId) {
@@ -249,25 +421,24 @@ function renderNotFoundState(stationId) {
     <article class="status-item" style="align-items: flex-start; flex-direction: column; gap: 8px;">
       <p class="status-title">No se encontro la estacion solicitada</p>
       <p class="line-meta">ID recibido: ${stationId || 'sin id'}</p>
-      <p class="line-meta">Volvé al buscador y abrí una estacion desde la lista de resultados.</p>
+      <p class="line-meta">Volve al buscador y abri una estacion desde la lista de resultados.</p>
     </article>
   `;
 }
 
 async function init() {
     const params = new URLSearchParams(window.location.search);
-    const stationId = params.get('id');
+    currentStationId = params.get('id') || '';
 
     const backBtn = document.getElementById('detailBackBtn');
     backBtn?.addEventListener('click', () => window.history.back());
 
-    if (!stationId) {
+    if (!currentStationId) {
         renderNotFoundState('');
         return;
     }
 
-    const arrivals = await getArrivals(stationId);
-    renderStationArrivals(arrivals);
+    await cargarArribos(currentStationId, currentSentido);
 }
 
 document.addEventListener('DOMContentLoaded', init);

@@ -1,4 +1,5 @@
 import { getTrainStationsByRamal } from './api.js';
+import { loadData, saveData } from './storage.js';
 
 const RAMALES_MAP = {
     141: 'Mitre',
@@ -10,12 +11,44 @@ const RAMALES_MAP = {
 
 const TRENES_LINEAS_JSON_PATH = './datos/trenes-lineas.json';
 const TRENES_RAMALES_JSON_PATH = './datos/trenes-ramales.json';
+const HISTORY_STORAGE_KEY = 'searchHistoryItems';
+const HISTORY_LIMIT = 20;
 
 let trenesLineas = [];
 let trenesLineasLoaded = false;
 let trenesRamales = [];
 let trenesRamalesLoaded = false;
 const ramalStationsCache = new Map();
+
+function addTrainStationToHistory(stationData) {
+    if (!stationData) {
+        return;
+    }
+
+    const stationId = String(stationData?.id_estacion || stationData?.id || '').trim();
+    if (!stationId) {
+        return;
+    }
+
+    const storedHistory = loadData(HISTORY_STORAGE_KEY);
+    const historyItems = Array.isArray(storedHistory) ? storedHistory : [];
+    const record = {
+        historyId: `train-station:${stationId.toLowerCase()}`,
+        kind: 'train-station',
+        source: 'trenes',
+        viewedAt: new Date().toISOString(),
+        title: stationData?.nombre || 'Estacion sin nombre',
+        subtitle: `Tren - Linea ${getStationLineFromRamales(stationData?.incluida_en_ramales || []) || 'Tren'}`,
+        data: stationData,
+    };
+
+    const nextHistory = [
+        record,
+        ...historyItems.filter(item => item?.historyId !== record.historyId),
+    ].slice(0, HISTORY_LIMIT);
+
+    saveData(HISTORY_STORAGE_KEY, nextHistory);
+}
 
 export function getStationLineFromRamales(ramales = []) {
     const mappedNames = Array.from(new Set(
@@ -232,6 +265,10 @@ export function handleTrenesListInteraction(event) {
     const stationCard = event.target.closest('[data-station-id]');
     const stationId = stationCard?.dataset.stationId;
     if (stationId) {
+        const stationData = Array.from(ramalStationsCache.values())
+            .flat()
+            .find(item => String(item?.id_estacion || item?.id || '') === String(stationId));
+        addTrainStationToHistory(stationData);
         window.location.href = `./detail.html?id=${encodeURIComponent(stationId)}`;
     }
     return true;
