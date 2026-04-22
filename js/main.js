@@ -38,9 +38,17 @@ import {
   renderFavoritesView,
   handleFavoritesClick,
 } from './favoritos.js';
+import {
+  initHistoryModule,
+  addHistoryItem,
+  renderHistoryView,
+  handleHistoryClick,
+  getHistoryItems,
+} from './historial.js';
 
 const TRANSPORT_DATA_KEY = 'transportData';
 const FAVORITES_STORAGE_KEY = 'favoriteTransportItems';
+const HISTORY_STORAGE_KEY = 'searchHistoryItems';
 const TRAIN_STATIONS_CACHE_KEY = 'trainStationsCache';
 const views = Array.from(document.querySelectorAll('.view'));
 const navLinks = Array.from(document.querySelectorAll('.bottom-nav .nav-link'));
@@ -139,8 +147,64 @@ function renderTransportCard({ item, source, title, subtitle, metaLines = [], ro
   `;
 }
 
+function renderHomeHistoryPreview() {
+  const homeHistoryPreview = document.getElementById('homeHistoryPreview');
+  if (!homeHistoryPreview) return;
+
+  const recentHistory = getHistoryItems().slice(0, 3);
+
+  if (recentHistory.length === 0) {
+    homeHistoryPreview.innerHTML = `
+      <article class="status-item">
+        <div>
+          <p class="status-title">Todavia no hay historial</p>
+          <p class="line-meta">Tus ultimas consultas de trenes y colectivos van a aparecer aca.</p>
+        </div>
+      </article>
+    `;
+    return;
+  }
+
+  homeHistoryPreview.innerHTML = recentHistory.map(record => `
+    <article class="line-card home-history-card" data-home-history-id="${record.historyId}">
+      <button type="button" class="transport-card-main" data-home-history-action="open">
+        <div class="line-card-main">
+          <div>
+            <p class="line-number">${record.title || 'Consulta reciente'}</p>
+            <p class="line-subtitle">${record.subtitle || 'Historial'}</p>
+          </div>
+          <span class="home-history-pill">${record.source === 'trenes' || record.kind === 'train-station' ? 'Tren' : record.source === 'subtes' ? 'Subte' : 'Colectivo'}</span>
+        </div>
+        <p class="line-meta">Abrir consulta reciente</p>
+      </button>
+    </article>
+  `).join('');
+}
+
+function openHistoryRecordFromHome(historyId) {
+  const historyRecord = getHistoryItems().find(item => item.historyId === historyId);
+  if (!historyRecord) {
+    return;
+  }
+
+  if (historyRecord.kind === 'train-station') {
+    const stationId = historyRecord.data?.id_estacion || historyRecord.data?.id;
+    if (stationId) {
+      addHistoryItem(historyRecord.data, 'trenes', { kind: 'train-station' });
+      window.location.href = `./detail.html?id=${encodeURIComponent(stationId)}`;
+    }
+    return;
+  }
+
+  addHistoryItem(historyRecord.data, historyRecord.source || 'historial');
+  renderLineDetails(historyRecord.data, historyRecord.source || 'historial');
+  navigateTo('detalle');
+}
+
 function refreshFavoriteAwareViews() {
   const currentView = getViewFromHash();
+
+  renderHomeHistoryPreview();
 
   if (currentView === 'colectivos' && getColectivosTripData().length > 0) {
     renderColectivosLines(getColectivosTripData(), getColectivosCurrentPage(), renderTransportCard);
@@ -160,6 +224,10 @@ function refreshFavoriteAwareViews() {
 
   if (currentView === 'favoritos') {
     renderFavoritesView();
+  }
+
+  if (currentView === 'historial') {
+    renderHistoryView();
   }
 
   if (currentView === 'detalle' && currentDetailData) {
@@ -195,6 +263,9 @@ function renderViewForName(viewName, transportData) {
       break;
     case 'favoritos':
       renderFavoritesView();
+      break;
+    case 'historial':
+      renderHistoryView();
       break;
     case 'detalle':
       if (currentDetailData) {
@@ -269,6 +340,10 @@ function handleLineClick(event) {
   const listId = event.currentTarget.id;
 
   if (listId === 'trenesList' && handleTrenesListInteraction(event)) {
+    return;
+  }
+
+  if ((listId === 'view-historial' || listId === 'historyList') && handleHistoryClick(event)) {
     return;
   }
 
@@ -365,10 +440,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     storageKey: FAVORITES_STORAGE_KEY,
     getStationLineFromRamales,
     onFavoritesChanged: refreshFavoriteAwareViews,
-    openStationDetail: stationId => {
+    openStationDetail: (stationId, stationData = null) => {
+      if (stationData) {
+        addHistoryItem(stationData, 'trenes', { kind: 'train-station' });
+      }
       window.location.href = `./detail.html?id=${encodeURIComponent(stationId)}`;
     },
     openTransportDetail: (data, source = 'detalle') => {
+      addHistoryItem(data, source);
+      renderLineDetails(data, source);
+      navigateTo('detalle');
+    },
+  });
+
+  initHistoryModule({
+    loadData,
+    saveData,
+    storageKey: HISTORY_STORAGE_KEY,
+    getStationLineFromRamales,
+    navigateTo,
+    onHistoryChanged: () => {
+      renderHomeHistoryPreview();
+      if (getViewFromHash() === 'historial') {
+        renderHistoryView();
+      }
+    },
+    openStationDetail: (stationId, stationData = null) => {
+      if (stationData) {
+        addHistoryItem(stationData, 'trenes', { kind: 'train-station' });
+      }
+      window.location.href = `./detail.html?id=${encodeURIComponent(stationId)}`;
+    },
+    openTransportDetail: (data, source = 'detalle') => {
+      addHistoryItem(data, source);
       renderLineDetails(data, source);
       navigateTo('detalle');
     },
@@ -383,10 +487,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     getStationLineFromRamales,
     isFavoriteItem,
     toggleFavoriteItem,
-    openStationDetail: stationId => {
+    openStationDetail: (stationId, stationData = null) => {
+      if (stationData) {
+        addHistoryItem(stationData, 'trenes', { kind: 'train-station' });
+      }
       window.location.href = `./detail.html?id=${encodeURIComponent(stationId)}`;
     },
     openTransportDetail: (data, source = 'detalle') => {
+      addHistoryItem(data, source);
       renderLineDetails(data, source);
       navigateTo('detalle');
     },
@@ -405,12 +513,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const homeTrenesCard = document.getElementById('homeTrenesCard');
   const homeFavoritesCard = document.getElementById('homeFavoritesCard');
   const homeSubtesCard = document.getElementById('homeSubtesCard');
+  const homeHistoryViewAllBtn = document.getElementById('homeHistoryViewAllBtn');
+  const homeHistoryPreview = document.getElementById('homeHistoryPreview');
 
   const colectivosList = document.getElementById('colectivosList');
   const soloColectivosList = document.getElementById('soloColectivosList');
   const subtesList = document.getElementById('subtesList');
   const searchResults = document.getElementById('searchResults');
   const favoritesSection = document.getElementById('view-favoritos');
+  const historySection = document.getElementById('view-historial');
   const detalleBackBtn = document.getElementById('detalleBackBtn');
 
   colectivosList?.addEventListener('click', handleLineClick);
@@ -418,6 +529,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   subtesList?.addEventListener('click', handleLineClick);
   searchResults?.addEventListener('click', handleLineClick);
   favoritesSection?.addEventListener('click', handleLineClick);
+  historySection?.addEventListener('click', handleLineClick);
+  homeHistoryPreview?.addEventListener('click', event => {
+    const actionButton = event.target.closest('[data-home-history-action]');
+    if (!actionButton) return;
+
+    const historyCard = event.target.closest('[data-home-history-id]');
+    const historyId = historyCard?.dataset.homeHistoryId;
+    if (!historyId) return;
+
+    openHistoryRecordFromHome(historyId);
+  });
 
   detalleBackBtn?.addEventListener('click', () => {
     window.history.back(); // Volver a la vista anterior preservando su estado
@@ -446,6 +568,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     navigateTo('buscar');
   });
 
+  homeHistoryViewAllBtn?.addEventListener('click', () => {
+    navigateTo('historial');
+  });
+
   setSearchTransportType('trenes');
 
   buscarBackBtn?.addEventListener('click', () => {
@@ -456,13 +582,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     button.addEventListener('click', async () => {
       const nextType = button.dataset.searchType || 'trenes';
       setSearchTransportType(nextType);
-
-      const currentQuery = String(searchInput?.value || '').trim();
-      if (currentQuery.length > 0) {
-        await runIntegratedSearch(currentQuery);
-      } else {
-        await runIntegratedSearch('');
-      }
     });
   });
 
@@ -512,6 +631,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
   renderViewForName(getViewFromHash(), transportData);
+  renderHomeHistoryPreview();
 
   searchButton?.addEventListener('click', async () => {
     await runIntegratedSearch(searchInput?.value || '');
