@@ -2,6 +2,7 @@
 import { saveData, loadData, toggleFavoriteItem, removeFavoriteItem, getFavoriteItems } from './storage.js';
 import { fetchStaticSubteData, enrichSubteRealTimeData } from './subtes.js';
 import { renderFavoritesView, renderColectivosLines, renderSoloColectivosLines, renderSubtesLines, renderSearchResults, renderLineDetails, renderSubtes } from './ui.js';
+import { openTrenesView, handleTrenesListInteraction, getStationLineFromRamales, ensureTrenesLineasLoaded, ensureTrenesRamalesLoaded } from './trenes.js';
 
 const TRANSPORT_DATA_KEY = 'transportData';
 const views = Array.from(document.querySelectorAll('.view'));
@@ -46,6 +47,29 @@ function navigateTo(viewName) {
   window.location.hash = target;
 }
 
+const TRAIN_STATIONS_CACHE_KEY = 'trainStationsCache';
+
+function persistTrainStationsCache(stations) {
+  const existing = loadData(TRAIN_STATIONS_CACHE_KEY);
+  const base = Array.isArray(existing) ? existing : [];
+  const incoming = Array.isArray(stations) ? stations : [];
+  const byId = new Map(base.map(item => [String(item?.id_estacion || item?.id || ''), item]));
+
+  incoming.forEach(item => {
+    const stationId = String(item?.id_estacion || item?.id || '');
+    if (stationId) {
+      byId.set(stationId, item);
+    }
+  });
+
+  saveData(TRAIN_STATIONS_CACHE_KEY, Array.from(byId.values()));
+}
+
+function loadTrainStationsCache() {
+  const cached = loadData(TRAIN_STATIONS_CACHE_KEY);
+  return Array.isArray(cached) ? cached : [];
+}
+
 function getActiveListData(listId) {
   switch (listId) {
     case 'colectivosList':
@@ -56,6 +80,8 @@ function getActiveListData(listId) {
       return { data: subtesDataArray, source: 'subtes' };
     case 'searchResults':
       return { data: buscarTransportData, source: 'buscar' };
+    case 'trenesList':
+      return { data: [], source: 'trenes' };
     default:
       return { data: [], source: 'desconocido' };
   }
@@ -107,6 +133,9 @@ function renderViewForName(viewName, transportData) {
       if (subtesDataArray.length > 0) {
         renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
       }
+      break;
+    case 'trenes':
+      openTrenesView(navigateTo);
       break;
     case 'buscar':
       if (buscarTransportData.length > 0) {
@@ -191,12 +220,17 @@ async function openSoloColectivosView() {
 }
 
 function handleLineClick(event) {
+  const listId = event.currentTarget.id;
+
+  if (listId === 'trenesList' && handleTrenesListInteraction(event)) {
+    return;
+  }
+
   const actionButton = event.target.closest('[data-card-action]');
   if (!actionButton) {
     return;
   }
 
-  const listId = event.currentTarget.id;
   const action = actionButton.dataset.cardAction;
 
   if (action === 'favorite-detail') {
@@ -322,16 +356,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   initHeaderOnScroll();
 
   staticSubteData = await fetchStaticSubteData();
+  await ensureTrenesLineasLoaded();
+  await ensureTrenesRamalesLoaded();
 
   const homeSearchBtn = document.getElementById('homeSearchBtn');
   const searchButton = document.getElementById('searchButton');
   const searchInput = document.getElementById('searchInput');
+  const buscarBackBtn = document.getElementById('buscarBackBtn');
+  const searchTypeFilters = Array.from(document.querySelectorAll('[data-search-type]'));
   const homeColectivosCard = document.getElementById('homeColectivosCard');
+  const homeTrenesCard = document.getElementById('homeTrenesCard');
   const homeSubtesCard = document.getElementById('homeSubtesCard');
   const homeFavoritesCard = document.getElementById('homeFavoritesCard');
   const colectivosBackBtn = document.getElementById('colectivosBackBtn');
   const colectivosPrevBtn = document.getElementById('colectivosPrevBtn');
   const colectivosNextBtn = document.getElementById('colectivosNextBtn');
+  const colectivosPrev10Btn = document.getElementById('colectivosPrev10Btn');
+  const colectivosNext10Btn = document.getElementById('colectivosNext10Btn');
 
   const colectivosList = document.getElementById('colectivosList');
   const soloColectivosList = document.getElementById('soloColectivosList');
@@ -352,7 +393,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   favoritesSection?.addEventListener('click', handleLineClick);
 
   detalleBackBtn?.addEventListener('click', () => {
-    window.history.back(); // Volver a la vista anterior preservando su estado
+    window.history.back();
   });
 
   favoritesSection?.addEventListener('click', event => {
@@ -361,6 +402,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (actionButton.dataset.favoritesAction === 'browse-colectivos') {
       openColectivosView();
+      return;
+    }
+
+    if (actionButton.dataset.favoritesAction === 'go-home') {
+      navigateTo('home');
     }
   });
 
@@ -369,16 +415,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('Datos de transporte cargados y almacenados localmente.');
   }
 
-  homeSearchBtn?.addEventListener('click', async () => {
-    await ensureTransportData();
+  homeSearchBtn?.addEventListener('click', () => {
     navigateTo('buscar');
   });
 
-  homeColectivosCard?.addEventListener('click', openSoloColectivosView);
+  buscarBackBtn?.addEventListener('click', () => {
+    navigateTo('home');
+  });
+
+  searchTypeFilters.forEach(button => {
+    button.addEventListener('click', async () => {
+      // Retain logic if type changes
+    });
+  });
+
+  homeColectivosCard?.addEventListener('click', () => openSoloColectivosView());
   homeColectivosCard?.addEventListener('keydown', event => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       openSoloColectivosView();
+    }
+  });
+
+  homeTrenesCard?.addEventListener('click', () => openTrenesView(navigateTo));
+  homeTrenesCard?.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openTrenesView(navigateTo);
     }
   });
 
@@ -405,6 +468,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
   }
+  
   homeFavoritesCard?.addEventListener('click', () => navigateTo('favoritos'));
   homeFavoritesCard?.addEventListener('keydown', event => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -413,7 +477,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  homeSubtesCard?.addEventListener('click', openSubtesView);
+  homeSubtesCard?.addEventListener('click', () => openSubtesView());
   homeSubtesCard?.addEventListener('keydown', event => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -421,12 +485,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  colectivosBackBtn?.addEventListener('click', () => {
+  const trenesBackBtn = document.getElementById('trenesBackBtn');
+  const trenesList = document.getElementById('trenesList');
+
+  trenesBackBtn?.addEventListener('click', () => {
     navigateTo('home');
   });
 
-  const colectivosPrev10Btn = document.getElementById('colectivosPrev10Btn');
-  const colectivosNext10Btn = document.getElementById('colectivosNext10Btn');
+  trenesList?.addEventListener('click', handleLineClick);
 
   colectivosPrevBtn?.addEventListener('click', () => {
     if (colectivosCurrentPage > 1) {
@@ -542,21 +608,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderSearchResults(buscarTransportData, buscarCurrentPage);
   });
 
-  const buscarPrevBtn = document.getElementById('buscarPrevBtn');
-  const buscarNextBtn = document.getElementById('buscarNextBtn');
-
-  buscarPrevBtn?.addEventListener('click', () => {
-    if (buscarCurrentPage > 1) {
-      buscarCurrentPage -= 1;
-      renderSearchResults(buscarTransportData, buscarCurrentPage);
+  searchInput?.addEventListener('keydown', async event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      searchButton.click();
     }
   });
 
-  buscarNextBtn?.addEventListener('click', () => {
-    const totalPages = Math.max(1, Math.ceil(buscarTransportData.length / BUSCAR_PAGE_SIZE));
-    if (buscarCurrentPage < totalPages) {
-      buscarCurrentPage += 1;
-      renderSearchResults(buscarTransportData, buscarCurrentPage);
-    }
-  });
 });
