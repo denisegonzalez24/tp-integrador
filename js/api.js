@@ -34,3 +34,15 @@ export async function getVehiclePositions() {
 export async function getArribosPorLinea(lineaId) {
   return await fetchTransportData('colectivos', `lineas/${lineaId}/arribos`);
 }
+
+export async function getSubtesForecastGTFS() {
+  const url = new URL('https://apitransporte.buenosaires.gob.ar/subtes/forecastGTFS');
+  url.searchParams.set('client_id', CLIENT_ID);
+  url.searchParams.set('client_secret', CLIENT_SECRET);
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Error HTTP ${response.status} - ${response.statusText}`);
+  }
+  return await response.json();
+}

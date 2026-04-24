@@ -1,4 +1,4 @@
-﻿import { getVehiclePositions } from './api.js';
+﻿import { getVehiclePositions, getSubtesForecastGTFS } from './api.js';
 import { saveData, loadData, toggleFavoriteItem, removeFavoriteItem, getFavoriteItems } from './storage.js';
 import { fetchStaticSubteData, enrichSubteRealTimeData } from './subtes.js';
 import { renderFavoritesView, renderColectivosLines, renderSoloColectivosLines, renderSubtesLines, renderSearchResults, renderLineDetails, renderSubtes } from './ui.js';
@@ -73,7 +73,7 @@ function refreshFavoriteAwareViews() {
   }
 
   if (currentView === 'subtes' && subtesDataArray.length > 0) {
-    renderSubtesLines(subtesDataArray, subtesCurrentPage);
+    renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
   }
 
   if (currentView === 'buscar' && buscarTransportData.length > 0) {
@@ -105,7 +105,7 @@ function renderViewForName(viewName, transportData) {
       break;
     case 'subtes':
       if (subtesDataArray.length > 0) {
-        renderSubtesLines(subtesDataArray, subtesCurrentPage);
+        renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
       }
       break;
     case 'buscar':
@@ -250,6 +250,15 @@ function handleLineClick(event) {
     return;
   }
 
+  if (action === 'line-detail') {
+    const routeId = actionButton.dataset.routeId;
+    currentDetailData = { isRouteLevel: true, routeId: routeId, entities: subtesDataArray };
+    currentDetailSource = source;
+    renderLineDetails(currentDetailData, currentDetailSource, staticSubteData);
+    navigateTo('detalle');
+    return;
+  }
+
   if (action === 'favorite') {
     const lineData = dataArray.find(item => String(item._ui_id) === tripId || String(item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || item.vehicle?.id || item.Linea?.Trip_Id) === tripId);
     if (lineData) {
@@ -377,14 +386,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     navigateTo('subtes');
     if (staticSubteData) {
       try {
-        const mockResponse = await fetch('./mock/mock_subtes.json').then(r => r.json());
-        subtesData = enrichSubteRealTimeData(mockResponse, staticSubteData);
+        const apiResponse = await getSubtesForecastGTFS();
+        subtesData = enrichSubteRealTimeData(apiResponse, staticSubteData);
         subtesDataArray = subtesData.Entity || subtesData.entity || [];
-        renderSubtes(subtesData, 'subtesList');
         subtesCurrentPage = 1;
-        renderSubtesLines(subtesDataArray, subtesCurrentPage);
+        renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
       } catch (e) {
-        console.error('Error cargando mock de subtes:', e);
+        console.error('Error cargando API de subtes, usando mock:', e);
+        try {
+          const mockResponse = await fetch('./mock/mock_subtes.json').then(r => r.json());
+          subtesData = enrichSubteRealTimeData(mockResponse, staticSubteData);
+          subtesDataArray = subtesData.Entity || subtesData.entity || [];
+          subtesCurrentPage = 1;
+          renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
+        } catch (mockErr) {
+          console.error('Error al cargar datos de subtes (API y mock):', mockErr);
+        }
       }
     }
   }
@@ -488,7 +505,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   subtesPrevBtn?.addEventListener('click', () => {
     if (subtesCurrentPage > 1) {
       subtesCurrentPage -= 1;
-      renderSubtesLines(subtesDataArray, subtesCurrentPage);
+      renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
     }
   });
 
@@ -496,19 +513,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const totalPages = Math.max(1, Math.ceil(subtesDataArray.length / SUBTES_PAGE_SIZE));
     if (subtesCurrentPage < totalPages) {
       subtesCurrentPage += 1;
-      renderSubtesLines(subtesDataArray, subtesCurrentPage);
+      renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
     }
   });
 
   subtesPrev10Btn?.addEventListener('click', () => {
     subtesCurrentPage = Math.max(1, subtesCurrentPage - 10);
-    renderSubtesLines(subtesDataArray, subtesCurrentPage);
+    renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
   });
 
   subtesNext10Btn?.addEventListener('click', () => {
     const totalPages = Math.max(1, Math.ceil(subtesDataArray.length / SUBTES_PAGE_SIZE));
     subtesCurrentPage = Math.min(totalPages, subtesCurrentPage + 10);
-    renderSubtesLines(subtesDataArray, subtesCurrentPage);
+    renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
   });
 
   renderViewForName(getViewFromHash(), transportData);
