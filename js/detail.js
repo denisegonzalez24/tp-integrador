@@ -1,11 +1,71 @@
 import { getTrainArrivalsByStation } from './api.js';
+import { loadData, saveData } from './storage.js';
 
 const ARRIVALS_COUNT = 5;
+const FAVORITES_STORAGE_KEY = 'favoriteTransportItems';
 
 let currentStationId = '';
 let currentSentido = 'todos';
 let destinoSeleccionado = 'Todos';
 let currentArrivals = [];
+
+function getDetailFavoriteId(stationData) {
+    return `buscar:${String(stationData?.id_estacion || stationData?.id || currentStationId || 'estacion').trim().toLowerCase()}`;
+}
+
+function buildDetailFavoriteRecord(stationData) {
+    return {
+        favoriteId: getDetailFavoriteId(stationData),
+        source: 'buscar',
+        savedAt: new Date().toISOString(),
+        title: `Estacion ${stationData?.nombre || 'sin nombre'}`,
+        subtitle: `Linea ${stationData?.linea || stationData?.lineName || 'Tren'}`,
+        data: stationData,
+    };
+}
+
+function loadFavoriteItems() {
+    const storedFavorites = loadData(FAVORITES_STORAGE_KEY);
+    return Array.isArray(storedFavorites) ? storedFavorites : [];
+}
+
+function isDetailFavorite(stationData) {
+    const favoriteId = getDetailFavoriteId(stationData);
+    return loadFavoriteItems().some(item => item.favoriteId === favoriteId);
+}
+
+function persistFavoriteItems(favoriteItems) {
+    saveData(FAVORITES_STORAGE_KEY, favoriteItems);
+}
+
+function toggleDetailFavorite(stationData) {
+    if (!stationData?.id_estacion && !stationData?.id && !currentStationId) {
+        return;
+    }
+
+    const favoriteId = getDetailFavoriteId(stationData);
+    const favoriteItems = loadFavoriteItems();
+    const existingIndex = favoriteItems.findIndex(item => item.favoriteId === favoriteId);
+
+    if (existingIndex >= 0) {
+        persistFavoriteItems(favoriteItems.filter(item => item.favoriteId !== favoriteId));
+    } else {
+        persistFavoriteItems([buildDetailFavoriteRecord(stationData), ...favoriteItems]);
+    }
+}
+
+function getCurrentStationData() {
+    const firstArrival = currentArrivals[0] || {};
+    const stationName = getStationName(firstArrival);
+    const lineName = getLineName(firstArrival);
+
+    return {
+        id_estacion: currentStationId,
+        nombre: stationName,
+        linea: lineName,
+        incluida_en_ramales: firstArrival?.servicio?.ramal?.id ? [firstArrival.servicio.ramal.id] : [],
+    };
+}
 
 function normalizeArrivalsResponse(payload) {
     if (Array.isArray(payload)) {
@@ -183,9 +243,9 @@ function getArrivalTime(item) {
 function renderSentidoFilters() {
     return `
         <div class="train-search-actions" style="margin: 16px 0 4px;">
-            <button type="button" class="secondary-btn ${currentSentido === 'todos' ? 'favorite-active' : ''}" data-sentido-filter="todos">Todos</button>
-            <button type="button" class="secondary-btn ${currentSentido === '1' ? 'favorite-active' : ''}" data-sentido-filter="1">Ida</button>
-            <button type="button" class="secondary-btn ${currentSentido === '2' ? 'favorite-active' : ''}" data-sentido-filter="2">Vuelta</button>
+            <button type="button" class="secondary-btn detail-filter-btn ${currentSentido === 'todos' ? 'is-active' : ''}" data-sentido-filter="todos">Todos</button>
+            <button type="button" class="secondary-btn detail-filter-btn ${currentSentido === '1' ? 'is-active' : ''}" data-sentido-filter="1">Ida</button>
+            <button type="button" class="secondary-btn detail-filter-btn ${currentSentido === '2' ? 'is-active' : ''}" data-sentido-filter="2">Vuelta</button>
         </div>
     `;
 }
@@ -208,7 +268,7 @@ export function renderFiltros(destinos = []) {
             ${uniqueDestinos.map(destino => `
                 <button
                     type="button"
-                    class="secondary-btn filtro-btn ${destino === destinoSeleccionado ? 'active favorite-active' : ''}"
+                    class="secondary-btn filtro-btn detail-filter-btn ${destino === destinoSeleccionado ? 'is-active' : ''}"
                     data-destino="${destino}"
                 >
                     ${destino}
@@ -258,6 +318,7 @@ export function activarBoton(botonActivo) {
         const isActive = button === botonActivo;
         button.classList.toggle('active', isActive);
         button.classList.toggle('favorite-active', isActive);
+        button.classList.toggle('is-active', isActive);
     });
 }
 
@@ -281,6 +342,24 @@ function renderDetailLayout(arrivals) {
     bindDestinoFilters();
 }
 
+function handleDetailActions(event) {
+    const actionButton = event.target.closest('[data-detail-action]');
+    if (!actionButton) {
+        return;
+    }
+
+    const action = actionButton.dataset.detailAction;
+    if (action !== 'favorite-station') {
+        return;
+    }
+
+    const stationData = getCurrentStationData();
+    toggleDetailFavorite(stationData);
+    renderDetailLayout(destinoSeleccionado === 'Todos'
+        ? currentArrivals
+        : currentArrivals.filter(item => getArrivalFilterDestination(item) === destinoSeleccionado));
+}
+
 export function aplicarFiltro() {
     const filteredArrivals = destinoSeleccionado === 'Todos'
         ? currentArrivals
@@ -301,6 +380,17 @@ function renderLoadingState() {
     `;
 
     bindSentidoFilters();
+}
+
+function renderFavoriteStationButton() {
+    const favoriteActive = isDetailFavorite(getCurrentStationData());
+    return `
+        <div class="detail-actions">
+            <button type="button" class="favorite-toggle ${favoriteActive ? 'is-active' : ''}" data-detail-action="favorite-station" aria-pressed="${favoriteActive}" aria-label="${favoriteActive ? 'Quitar de favoritos' : 'Agregar a favoritos'}">
+                ${favoriteActive ? '★' : '☆'}
+            </button>
+        </div>
+    `;
 }
 
 export async function cargarArribos(id, sentido = 'todos') {
@@ -352,6 +442,7 @@ export function renderArrivals(list) {
     const branchName = getBranchName(firstItem);
 
     return `
+        ${renderFavoriteStationButton()}
         <article class="status-item train-header-card" style="align-items: flex-start; flex-direction: column; gap: 8px;">
             <p class="line-meta train-header-meta">Sentido: ${directionLabel} • Ramal: ${branchName} • Linea: ${lineName}</p>
             <div class="train-title-row">
@@ -432,6 +523,7 @@ async function init() {
 
     const backBtn = document.getElementById('detailBackBtn');
     backBtn?.addEventListener('click', () => window.history.back());
+    document.addEventListener('click', handleDetailActions);
 
     if (!currentStationId) {
         renderNotFoundState('');

@@ -1,159 +1,167 @@
-import { getSubtesForecast } from './api.js';
+const SUBTES_DATA_JSON_PATH = './datos/subtes.json';
 
 let subtesCurrentPage = 1;
-const SUBTES_PAGE_SIZE = 10;
 let subtesDataArray = [];
+let subtesCatalogLoaded = false;
 
-function getSubtesPageData(page = 1) {
-    const startIndex = (page - 1) * SUBTES_PAGE_SIZE;
-    return subtesDataArray.slice(startIndex, startIndex + SUBTES_PAGE_SIZE);
+function normalizeStationName(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
 }
 
-function updateSubtesPaginationControls() {
-    const prev10Btn = document.getElementById('subtesPrev10Btn');
-    const prevBtn = document.getElementById('subtesPrevBtn');
-    const nextBtn = document.getElementById('subtesNextBtn');
-    const next10Btn = document.getElementById('subtesNext10Btn');
-    const pageLabel = document.getElementById('subtesPageLabel');
-    const totalPages = Math.max(1, Math.ceil(subtesDataArray.length / SUBTES_PAGE_SIZE));
-
-    if (prev10Btn) prev10Btn.disabled = subtesCurrentPage <= 1;
-    if (prevBtn) prevBtn.disabled = subtesCurrentPage <= 1;
-    if (nextBtn) nextBtn.disabled = subtesCurrentPage >= totalPages;
-    if (next10Btn) next10Btn.disabled = subtesCurrentPage >= totalPages;
-    if (pageLabel) pageLabel.textContent = `${subtesCurrentPage} de ${totalPages}`;
-}
-
-function normalizeSubtesData(data) {
-    if (Array.isArray(data)) {
-        return data;
+function hideSubtesPagination() {
+    const subtesPagination = document.getElementById('subtesPagination');
+    if (subtesPagination) {
+        subtesPagination.style.display = 'none';
     }
-    if (data && Array.isArray(data.entity)) {
-        return data.entity;
-    }
-    if (data && Array.isArray(data.Entity)) {
-        return data.Entity;
-    }
-    return [];
 }
 
-export function setSubtesData(data) {
-    subtesDataArray = Array.isArray(data) ? data : [];
+async function ensureSubtesCatalogLoaded() {
+    if (subtesCatalogLoaded && Array.isArray(subtesDataArray) && subtesDataArray.length > 0) {
+        return;
+    }
+
+    try {
+        const response = await fetch(SUBTES_DATA_JSON_PATH);
+        if (!response.ok) {
+            throw new Error(`Error HTTP ${response.status} - ${response.statusText}`);
+        }
+
+        const payload = await response.json();
+        subtesDataArray = Array.isArray(payload?.lineas) ? payload.lineas : [];
+        subtesCatalogLoaded = true;
+    } catch (error) {
+        console.error('Error al cargar lineas de subte:', error);
+        subtesDataArray = [];
+    }
 }
 
-export async function loadSubtesData() {
-    const response = await getSubtesForecast().catch(err => {
-        console.error(err);
-        return [];
+function getLineStations(linea) {
+    const byName = new Map();
+
+    (Array.isArray(linea?.ramales) ? linea.ramales : []).forEach(ramal => {
+        (Array.isArray(ramal?.estaciones) ? ramal.estaciones : []).forEach(station => {
+            const stationName = String(station?.nombre || '').trim();
+            const key = normalizeStationName(stationName);
+
+            if (!stationName || byName.has(key)) {
+                return;
+            }
+
+            byName.set(key, {
+                nombre: stationName,
+            });
+        });
     });
-    subtesDataArray = normalizeSubtesData(response);
-    return subtesDataArray;
+
+    return Array.from(byName.values())
+        .sort((a, b) => String(a.nombre).localeCompare(String(b.nombre)));
 }
 
 export function renderSubtesLines(data, page = 1, renderTransportCard) {
     const listContainer = document.getElementById('subtesList');
-    if (!listContainer) return;
-
-    subtesDataArray = normalizeSubtesData(data);
-    subtesCurrentPage = page;
-
-    if (subtesDataArray.length === 0) {
-        listContainer.innerHTML = '<p class="empty">No se encontraron datos de subtes.</p>';
-        updateSubtesPaginationControls();
+    if (!listContainer) {
         return;
     }
 
-    const pageData = getSubtesPageData(subtesCurrentPage);
+    hideSubtesPagination();
+    subtesCurrentPage = page;
+    subtesDataArray = Array.isArray(data) ? data : [];
 
-    listContainer.innerHTML = pageData.map((item, index) => {
-        const tripUpdate = item.trip_update || item.tripUpdate || {};
-        const vehicle = item.vehicle || item.Vehicle || {};
-        const trip = tripUpdate.trip || vehicle.trip || item.trip || {};
-        const linea = item.linea || item.Linea || {};
+    if (subtesDataArray.length === 0) {
+        listContainer.innerHTML = '<p class="empty">No se encontraron lineas de subte.</p>';
+        return;
+    }
 
-        const routeName = trip.route_id || trip.routeId || item.route_id || item.routeId || linea.route_Id || linea.route_id || 'Subte';
-        const displayRoute = routeName.replace(/l[ií]nea/i, '').replace(/_/g, ' ').trim();
-        const tripId = trip.trip_id || trip.tripId || item.trip_id || item.tripId || '';
-        const uniqueId = item.id || tripId || `subte-${index}`;
-        item._ui_id = uniqueId;
+    listContainer.innerHTML = subtesDataArray.map(linea => {
+        const stations = getLineStations(linea);
 
-        let arrivalText = 'Arribos en tiempo real';
-        const stopTimeUpdates = tripUpdate.stop_time_update || tripUpdate.stopTimeUpdate;
-
-        if (stopTimeUpdates && stopTimeUpdates.length > 0) {
-            const firstUpdate = stopTimeUpdates[0];
-            const arrivalTime = firstUpdate.arrival?.time || firstUpdate.departure?.time;
-
-            if (arrivalTime) {
-                const date = new Date(arrivalTime * 1000);
-                const now = new Date();
-                const diffMins = Math.round((date - now) / 60000);
-
-                if (diffMins <= 0) {
-                    arrivalText = 'Llegando...';
-                } else if (diffMins < 60) {
-                    arrivalText = `Proximo arribo en ${diffMins} min`;
-                } else {
-                    arrivalText = `Proximo arribo: ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-                }
-            }
-        }
-
-        return renderTransportCard({
-            item,
-            source: 'subtes',
-            title: `Linea ${displayRoute === 'Subte' ? 'Subte' : displayRoute}`,
-            subtitle: `Subte ${tripId ? `- Viaje ${tripId}` : ''}`,
-            routeLine: arrivalText,
-        });
+        return `
+      <details class="trenes-line-details" data-subte-line="${linea.id}">
+        <summary class="trenes-line-summary">
+          <div class="trenes-line-header">
+            <p class="trenes-line-name">Linea ${linea.id}</p>
+            <div class="trenes-line-info">
+              <span class="line-meta">${stations.length} estaciones</span>
+            </div>
+          </div>
+        </summary>
+        <div class="trenes-ramales-container">
+          <p class="line-meta">${linea?.recorrido || 'Recorrido no disponible'}</p>
+          <div class="ramal-stations-list">
+            ${stations.map(station => `
+              <button
+                type="button"
+                class="train-station-card"
+                data-card-action="open-subte-station"
+                data-subte-line-id="${linea.id}"
+                data-subte-station-name="${station.nombre}"
+              >
+                <span class="train-station-name">${station.nombre}</span>
+                <span class="train-station-action">Ver detalle</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      </details>
+    `;
     }).join('');
+}
 
-    updateSubtesPaginationControls();
+export async function loadSubtesData() {
+    await ensureSubtesCatalogLoaded();
+    return subtesDataArray;
 }
 
 export async function openSubtesView(navigateTo, renderTransportCard) {
     const subtesList = document.getElementById('subtesList');
-    if (subtesList) subtesList.innerHTML = '<p class="empty">Cargando datos de subtes...</p>';
+    if (subtesList) {
+        subtesList.innerHTML = '<p class="empty">Cargando lineas de subte...</p>';
+    }
+
     navigateTo('subtes');
-    const data = await loadSubtesData();
-    subtesCurrentPage = 1;
-    renderSubtesLines(data || [], subtesCurrentPage, renderTransportCard);
+    await ensureSubtesCatalogLoaded();
+    renderSubtesLines(subtesDataArray, 1, renderTransportCard);
+}
+
+export function handleSubtesListInteraction(event) {
+    const listId = event.currentTarget.id;
+    if (listId !== 'subtesList') {
+        return false;
+    }
+
+    const actionButton = event.target.closest('[data-card-action]');
+    if (!actionButton) {
+        return false;
+    }
+
+    if (actionButton.dataset.cardAction !== 'open-subte-station') {
+        return false;
+    }
+
+    const stationButton = event.target.closest('[data-subte-station-name]');
+    const stationName = stationButton?.dataset.subteStationName;
+    const lineId = stationButton?.dataset.subteLineId;
+
+    if (!stationName) {
+        return true;
+    }
+
+    const params = new URLSearchParams({
+        station: stationName,
+        linea: lineId || '',
+    });
+    window.location.href = `./subte-detail.html?${params.toString()}`;
+    return true;
 }
 
 export function bindSubtesControls({ navigateTo, renderTransportCard }) {
     const subtesBackBtn = document.getElementById('subtesBackBtn');
-    const subtesPrevBtn = document.getElementById('subtesPrevBtn');
-    const subtesNextBtn = document.getElementById('subtesNextBtn');
-    const subtesPrev10Btn = document.getElementById('subtesPrev10Btn');
-    const subtesNext10Btn = document.getElementById('subtesNext10Btn');
-
+    hideSubtesPagination();
     subtesBackBtn?.addEventListener('click', () => navigateTo('home'));
-
-    subtesPrevBtn?.addEventListener('click', () => {
-        if (subtesCurrentPage > 1) {
-            subtesCurrentPage -= 1;
-            renderSubtesLines(subtesDataArray, subtesCurrentPage, renderTransportCard);
-        }
-    });
-
-    subtesNextBtn?.addEventListener('click', () => {
-        const totalPages = Math.max(1, Math.ceil(subtesDataArray.length / SUBTES_PAGE_SIZE));
-        if (subtesCurrentPage < totalPages) {
-            subtesCurrentPage += 1;
-            renderSubtesLines(subtesDataArray, subtesCurrentPage, renderTransportCard);
-        }
-    });
-
-    subtesPrev10Btn?.addEventListener('click', () => {
-        subtesCurrentPage = Math.max(1, subtesCurrentPage - 10);
-        renderSubtesLines(subtesDataArray, subtesCurrentPage, renderTransportCard);
-    });
-
-    subtesNext10Btn?.addEventListener('click', () => {
-        const totalPages = Math.max(1, Math.ceil(subtesDataArray.length / SUBTES_PAGE_SIZE));
-        subtesCurrentPage = Math.min(totalPages, subtesCurrentPage + 10);
-        renderSubtesLines(subtesDataArray, subtesCurrentPage, renderTransportCard);
-    });
 }
 
 export function getSubtesData() {

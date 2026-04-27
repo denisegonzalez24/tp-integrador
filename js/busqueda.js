@@ -1,8 +1,8 @@
-import { getTrainStationsByName, getVehiclePositionsDetailed } from './api.js';
+import { getSubtesServiceAlerts, getTrainStationsByName, getVehiclePositionsDetailed } from './api.js';
 
 const TRAIN_SEARCH_MIN_CHARS = 3;
 const COLECTIVOS_SEARCH_MIN_CHARS = 0;
-const SUBTES_SEARCH_MIN_CHARS = 1;
+const SUBTES_SEARCH_MIN_CHARS = 0;
 const BUSCAR_PAGE_SIZE = 10;
 
 const COLECTIVOS_DIRECTION_LABELS = {
@@ -25,6 +25,11 @@ let colectivosFilters = {
     direccion: 'todos',
     estado: 'todos',
 };
+let subtesFilters = {
+    alerta: 'todos',
+    linea: 'todos',
+};
+let subtesCatalogCache = null;
 
 export function initSearchModule(context) {
     ctx = context || {};
@@ -143,6 +148,14 @@ function buildSubteSearchItem(item, index) {
     };
 }
 
+function buildIntegratedSubteSearchItem(item, index) {
+    return {
+        ...item,
+        _searchType: 'subtes',
+        _searchId: item._searchId || `buscar-subte-integrado-${index}`,
+    };
+}
+
 function buildTrainSearchItem(item, index) {
     return {
         ...item,
@@ -258,39 +271,90 @@ function bindColectivosFilterEvents() {
     });
 }
 
+function bindSubtesFilterEvents() {
+    const alertasFilter = document.getElementById('subtesAlertasFilter');
+    const lineaFilter = document.getElementById('subtesLineaFilter');
+
+    alertasFilter?.addEventListener('change', event => {
+        subtesFilters.alerta = event.target.value;
+    });
+
+    lineaFilter?.addEventListener('change', event => {
+        subtesFilters.linea = event.target.value;
+    });
+}
+
+function getSubtesLineFilterOptions() {
+    const preferredOrder = ['A', 'B', 'C', 'D', 'E', 'H', 'PM-C', 'PM-S'];
+    const catalogLines = Array.isArray(subtesCatalogCache?.lineas)
+        ? subtesCatalogCache.lineas
+            .map(line => String(line?.id || '').trim().toUpperCase())
+            .filter(Boolean)
+        : [];
+
+    const merged = Array.from(new Set([...preferredOrder, ...catalogLines]));
+    return [{ value: 'todos', label: 'Todas' }, ...merged.map(line => ({ value: line, label: `Linea ${line}` }))];
+}
+
 export function renderFiltros(tipo) {
     const container = getDynamicFiltersContainer();
     if (!container) {
         return;
     }
 
-    if (tipo !== 'colectivos') {
+    if (tipo !== 'colectivos' && tipo !== 'subtes') {
         container.innerHTML = '';
+        return;
+    }
+
+    if (tipo === 'subtes') {
+        container.innerHTML = `
+            <div class="search-dynamic-filters">
+                ${buildFilterSelect({
+            id: 'subtesLineaFilter',
+            label: 'Linea',
+            options: getSubtesLineFilterOptions(),
+            value: subtesFilters.linea,
+        })}
+                ${buildFilterSelect({
+            id: 'subtesAlertasFilter',
+            label: 'Alertas',
+            options: [
+                { value: 'todos', label: 'Todos' },
+                { value: 'con_alertas', label: 'Con alertas' },
+                { value: 'sin_alertas', label: 'Sin alertas' },
+            ],
+            value: subtesFilters.alerta,
+        })}
+            </div>
+        `;
+
+        bindSubtesFilterEvents();
         return;
     }
 
     container.innerHTML = `
         <div class="search-dynamic-filters">
             ${buildFilterSelect({
-                id: 'colectivosDireccionFilter',
-                label: 'Direccion',
-                options: [
-                    { value: 'todos', label: 'Todos' },
-                    { value: '0', label: 'Ida' },
-                    { value: '1', label: 'Vuelta' },
-                ],
-                value: colectivosFilters.direccion,
-            })}
+        id: 'colectivosDireccionFilter',
+        label: 'Direccion',
+        options: [
+            { value: 'todos', label: 'Todos' },
+            { value: '0', label: 'Ida' },
+            { value: '1', label: 'Vuelta' },
+        ],
+        value: colectivosFilters.direccion,
+    })}
             ${buildFilterSelect({
-                id: 'colectivosEstadoFilter',
-                label: 'Estado',
-                options: [
-                    { value: 'todos', label: 'Todos' },
-                    { value: '2', label: 'En movimiento' },
-                    { value: '1', label: 'En parada' },
-                ],
-                value: colectivosFilters.estado,
-            })}
+        id: 'colectivosEstadoFilter',
+        label: 'Estado',
+        options: [
+            { value: 'todos', label: 'Todos' },
+            { value: '2', label: 'En movimiento' },
+            { value: '1', label: 'En parada' },
+        ],
+        value: colectivosFilters.estado,
+    })}
         </div>
     `;
 
@@ -365,36 +429,195 @@ async function searchColectivos() {
     return filtrarColectivos(data, colectivosFilters);
 }
 
-async function searchSubtes(query) {
-    let source = ctx.getSubtesData?.() || [];
+function mapRouteIdToLine(routeId) {
+    const normalizedRoute = normalizeText(routeId)
+        .replace(/\s+/g, '')
+        .replace(/^linea/, '')
+        .toUpperCase();
 
-    if (!Array.isArray(source) || source.length === 0) {
-        source = await ctx.loadSubtesData?.();
+    if (!normalizedRoute) {
+        return '';
     }
 
-    const normalizedQuery = normalizeText(query);
-    return (Array.isArray(source) ? source : [])
-        .filter(item => {
-            const tripUpdate = item.trip_update || item.tripUpdate || {};
-            const vehicle = item.vehicle || item.Vehicle || {};
-            const trip = tripUpdate.trip || vehicle.trip || item.trip || {};
-            const linea = item.linea || item.Linea || {};
+    if (/^[A-Z]$/.test(normalizedRoute)) {
+        return normalizedRoute;
+    }
 
-            const searchable = [
-                trip?.route_id,
-                trip?.routeId,
-                item?.route_id,
-                item?.routeId,
-                linea?.route_Id,
-                linea?.route_id,
-                trip?.trip_headsign,
-                trip?.tripHeadsign,
-            ].map(normalizeText).join(' ');
+    if (/^PM-[A-Z]$/.test(normalizedRoute)) {
+        return normalizedRoute;
+    }
 
-            return searchable.includes(normalizedQuery);
-        })
-        .slice(0, 100)
-        .map(buildSubteSearchItem);
+    return normalizedRoute;
+}
+
+function buildLineAliasList(linea) {
+    const lineValue = String(linea || '').trim().toUpperCase();
+    if (!lineValue) {
+        return [];
+    }
+
+    return [lineValue, `LINEA ${lineValue}`, `L ${lineValue}`];
+}
+
+async function resolveSubtesCatalogData() {
+    if (subtesCatalogCache && typeof subtesCatalogCache === 'object') {
+        return subtesCatalogCache;
+    }
+
+    const contextData = ctx.getSubtesCatalogData?.() || ctx.subtesCatalogData;
+    if (contextData && typeof contextData === 'object') {
+        subtesCatalogCache = contextData;
+        return subtesCatalogCache;
+    }
+
+    if (typeof globalThis !== 'undefined' && globalThis.data && typeof globalThis.data === 'object') {
+        subtesCatalogCache = globalThis.data;
+        return subtesCatalogCache;
+    }
+
+    try {
+        const response = await fetch('./datos/subtes.json');
+        if (!response.ok) {
+            throw new Error(`Error HTTP ${response.status} - ${response.statusText}`);
+        }
+
+        subtesCatalogCache = await response.json();
+        return subtesCatalogCache;
+    } catch (error) {
+        console.error('No se pudo cargar datos/subtes.json:', error);
+        return { estaciones_index: {}, lineas: [] };
+    }
+}
+
+async function loadSubtesAlertsByLine() {
+    try {
+        const payload = await getSubtesServiceAlerts();
+        const rawAlerts = Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload?.entity)
+                ? payload.entity
+                : Array.isArray(payload?.data)
+                    ? payload.data
+                    : [];
+
+        const byLine = new Map();
+
+        rawAlerts.forEach(alert => {
+            const line = mapRouteIdToLine(alert?.route_id || alert?.routeId || alert?.route || '');
+            const text = String(alert?.header_text || alert?.headerText || alert?.description || '').trim();
+
+            if (!line || !text) {
+                return;
+            }
+
+            if (!byLine.has(line)) {
+                byLine.set(line, text);
+            }
+        });
+
+        return byLine;
+    } catch (error) {
+        console.error('No se pudieron cargar alertas de subte:', error);
+        return new Map();
+    }
+}
+
+function normalizeSubteAlertFilterValue(filter) {
+    if (filter === 'con_alertas' || filter === 'sin_alertas' || filter === 'todos') {
+        return filter;
+    }
+    return 'todos';
+}
+
+function normalizeSubteLineFilterValue(filter) {
+    const normalized = String(filter || '').trim().toUpperCase();
+    if (!normalized || normalized === 'TODOS') {
+        return 'todos';
+    }
+
+    return normalized;
+}
+
+function shouldKeepSubteResult(hasAlert, filter) {
+    if (filter === 'con_alertas') {
+        return hasAlert;
+    }
+    if (filter === 'sin_alertas') {
+        return !hasAlert;
+    }
+    return true;
+}
+
+function stationMatchesSubteQuery(normalizedQuery, stationName, lineas = [], alerta = '') {
+    if (!normalizedQuery) {
+        return true;
+    }
+
+    const normalizedStation = normalizeText(stationName);
+    const normalizedAlert = normalizeText(alerta);
+    const lineAliases = lineas.flatMap(buildLineAliasList).map(normalizeText);
+
+    return normalizedStation.includes(normalizedQuery)
+        || lineAliases.some(alias => alias.includes(normalizedQuery))
+        || normalizedAlert.includes(normalizedQuery);
+}
+
+export async function searchSubtes(query, filtro = 'todos') {
+    const normalizedQuery = normalizeText(String(query || '').trim());
+    const normalizedFilter = normalizeSubteAlertFilterValue(filtro);
+    const normalizedLineFilter = normalizeSubteLineFilterValue(subtesFilters.linea);
+    const [catalogData, alertsByLine] = await Promise.all([
+        resolveSubtesCatalogData(),
+        loadSubtesAlertsByLine(),
+    ]);
+
+    const estacionesIndex = catalogData?.estaciones_index && typeof catalogData.estaciones_index === 'object'
+        ? catalogData.estaciones_index
+        : {};
+    const deduped = new Map();
+
+    Object.values(estacionesIndex).forEach(station => {
+        const stationName = String(station?.nombre || '').trim();
+        if (!stationName) {
+            return;
+        }
+
+        const lineas = Array.from(new Set((Array.isArray(station?.lineas) ? station.lineas : [])
+            .map(linea => String(linea || '').trim().toUpperCase())
+            .filter(Boolean)));
+
+        if (normalizedLineFilter !== 'todos' && !lineas.includes(normalizedLineFilter)) {
+            return;
+        }
+
+        const alertas = lineas
+            .map(linea => alertsByLine.get(linea))
+            .filter(Boolean);
+        const alerta = alertas[0] || '';
+        const hasAlert = Boolean(alerta);
+
+        if (!shouldKeepSubteResult(hasAlert, normalizedFilter)) {
+            return;
+        }
+
+        if (!stationMatchesSubteQuery(normalizedQuery, stationName, lineas, alerta)) {
+            return;
+        }
+
+        const dedupeKey = normalizeText(stationName);
+        deduped.set(dedupeKey, {
+            titulo: stationName,
+            tipo: 'subte',
+            linea: lineas,
+            ids: Array.isArray(station?.ids) ? station.ids : [],
+            ...(alerta ? { alerta } : {}),
+            _searchId: `subte:${dedupeKey}`,
+        });
+    });
+
+    return Array.from(deduped.values())
+        .sort((a, b) => String(a.titulo).localeCompare(String(b.titulo)))
+        .map((item, index) => buildIntegratedSubteSearchItem(item, index));
 }
 
 async function searchTrenes(query) {
@@ -480,7 +703,7 @@ export function renderSearchResults(data, page = 1) {
             </div>
             <div class="train-search-actions">
               <button type="button" class="link-button station-link" data-card-action="open-station">Ver detalle</button>
-              <button type="button" class="secondary-btn ${isFavoriteTrain ? 'favorite-active' : ''}" data-card-action="favorite-train">${isFavoriteTrain ? 'Favorito' : 'Favorito +'}</button>
+                            <button type="button" class="favorite-toggle ${isFavoriteTrain ? 'is-active' : ''}" data-card-action="favorite-train" aria-pressed="${isFavoriteTrain}" aria-label="${isFavoriteTrain ? 'Quitar de favoritos' : 'Agregar a favoritos'}">${isFavoriteTrain ? '★' : '☆'}</button>
             </div>
           </div>
           <p class="line-meta">ID estacion: ${stationId || 'N/A'}</p>
@@ -489,21 +712,21 @@ export function renderSearchResults(data, page = 1) {
         }
 
         if (item?._searchType === 'colectivos') {
-            const position = getColectivoPosition(item);
+            const isFavoriteTrain = ctx.isFavoriteItem?.(item, 'buscar');
 
             return `
-        <article class="line-card" data-search-id="${item._searchId}">
-          <div class="line-card-main">
+                <article class="line-card transport-card" data-search-id="${item._searchId}">
+                    <button type="button" class="transport-card-main" data-card-action="open-search-item">
+                        <div class="line-card-main">
             <div>
               <p class="line-number">Linea ${getColectivoLinea(item) || 'N/A'}</p>
               <p class="line-subtitle">Colectivo - ${getColectivoVehicleLabel(item) || getColectivoDestino(item)}</p>
             </div>
-            <button type="button" class="link-button station-link" data-card-action="open-search-item">Ver detalle</button>
-          </div>
+                        </div>
           <p class="line-meta">Direccion: ${getColectivoDirectionLabel(item)} • Estado: ${getColectivoStatusLabel(item)}</p>
-          <p class="line-meta">Vehiculo: ${getColectivoVehicleId(item) || 'N/A'} • Interno: ${getColectivoVehicleLabel(item) || 'N/A'} • Patente: ${getColectivoLicensePlate(item) || 'N/A'}</p>
-          <p class="line-meta">Lat ${position?.latitude?.toFixed?.(4) || 'N/A'} - Lon ${position?.longitude?.toFixed?.(4) || 'N/A'}</p>
-        </article>
+                    </button>
+                    <button type="button" class="favorite-toggle ${isFavoriteTrain ? 'is-active' : ''}" data-card-action="favorite-train" aria-pressed="${isFavoriteTrain}" aria-label="${isFavoriteTrain ? 'Quitar de favoritos' : 'Agregar a favoritos'}">${isFavoriteTrain ? '★' : '☆'}</button>
+                </article>
       `;
         }
 
@@ -511,11 +734,12 @@ export function renderSearchResults(data, page = 1) {
       <article class="line-card" data-search-id="${item._searchId}">
         <div class="line-card-main">
           <div>
-            <p class="line-number">Linea ${item?.linea?.route_Id || item?.linea?.route_id || item?.trip?.route_id || item?.trip?.routeId || 'Subte'}</p>
-            <p class="line-subtitle">Subte - ${item?.trip?.trip_headsign || item?.trip?.tripHeadsign || 'En servicio'}</p>
+                        <p class="line-number">${item?.titulo || 'Estacion de subte'}</p>
+                        <p class="line-subtitle">Subte - Linea ${(Array.isArray(item?.linea) && item.linea.length > 0) ? item.linea.join(' / ') : 'N/A'}</p>
           </div>
           <button type="button" class="link-button station-link" data-card-action="open-search-item">Ver detalle</button>
         </div>
+                <p class="line-meta">${item?.alerta ? `Alerta: ${item.alerta}` : 'Sin alertas reportadas'}</p>
       </article>
     `;
     }).join('');
@@ -564,7 +788,7 @@ export async function runIntegratedSearch(query) {
         }
 
         if (searchTransportType === 'subtes') {
-            results = await searchSubtes(trimmedQuery);
+            results = await searchSubtes(trimmedQuery, subtesFilters.alerta);
         } else {
             results = await searchTrenes(trimmedQuery);
         }
@@ -643,6 +867,12 @@ export function handleSearchResultsAction(event) {
 
         const selectedItem = buscarTransportData.find(item => String(item?._searchId) === String(searchId));
         if (!selectedItem) {
+            return true;
+        }
+
+        if (selectedItem._searchType === 'subtes') {
+            const firstLine = Array.isArray(selectedItem.linea) && selectedItem.linea.length > 0 ? selectedItem.linea[0] : '';
+            ctx.openSubteStationDetail?.(selectedItem.titulo, firstLine, selectedItem);
             return true;
         }
 

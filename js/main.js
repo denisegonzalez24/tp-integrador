@@ -17,6 +17,7 @@ import {
   openSubtesView,
   loadSubtesData,
   bindSubtesControls,
+  handleSubtesListInteraction,
   getSubtesData,
   getSubtesCurrentPage,
   refreshSubtesView,
@@ -343,6 +344,10 @@ function handleLineClick(event) {
     return;
   }
 
+  if (listId === 'subtesList' && handleSubtesListInteraction(event)) {
+    return;
+  }
+
   if ((listId === 'view-historial' || listId === 'historyList') && handleHistoryClick(event)) {
     return;
   }
@@ -497,6 +502,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       addHistoryItem(data, source);
       renderLineDetails(data, source);
       navigateTo('detalle');
+    },
+    openSubteStationDetail: (stationName, lineId = '', stationData = null) => {
+      if (stationData) {
+        addHistoryItem(stationData, 'subtes');
+      }
+      const params = new URLSearchParams({
+        station: stationName || '',
+        linea: lineId || '',
+      });
+      window.location.href = `./subte-detail.html?${params.toString()}`;
     },
   });
 

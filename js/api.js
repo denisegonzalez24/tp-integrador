@@ -45,6 +45,10 @@ export async function getSubtesForecast() {
   return await fetchTransportData('subtes', 'forecastGTFS');
 }
 
+export async function getSubtesServiceAlerts(params = {}) {
+  return await fetchTransportData('subtes', 'serviceAlerts', params);
+}
+
 function buildTrenesUrl(path, params = {}) {
   const url = new URL(`${TRENES_API_HOST}/${path}`);
 
