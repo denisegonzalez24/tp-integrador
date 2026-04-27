@@ -1,0 +1,20 @@
+[
+  {
+    "route_id": "2520",
+    "route_short_name": "620",
+    "route_long_name": "Ruta 3 KM 47 - Gral. Paz",
+    "route_color": "00b37e"
+  },
+  {
+    "route_id": "2521",
+    "route_short_name": "621",
+    "route_long_name": "Ramos Mejia - Ciudad Evita",
+    "route_color": "00b37e"
+  },
+  {
+    "route_id": "2522",
+    "route_short_name": "622",
+    "route_long_name": "Ramos Mejia - Gonzalez Catan",
+    "route_color": "00b37e"
+  }
+]

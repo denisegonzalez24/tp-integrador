@@ -1,9 +1,11 @@
-﻿import { getVehiclePositions, getSubtesForecastGTFS } from './api.js';
+﻿import { getVehiclePositions, getColectivosRealTime } from './api.js';
 import { saveData, loadData, toggleFavoriteItem, removeFavoriteItem, getFavoriteItems } from './storage.js';
-import { fetchStaticSubteData, enrichSubteRealTimeData } from './subtes.js';
-import { renderFavoritesView, renderColectivosLines, renderSoloColectivosLines, renderSubtesLines, renderSearchResults, renderLineDetails, renderSubtes } from './ui.js';
+import { fetchSubtesData, getSubtesRoutes, getParadasBySubteRoute } from './subtes.js';
+import { renderFavoritesView,renderColectivos, renderColectivosLines, renderSoloColectivosLines, renderSearchResults, renderLineDetails, renderSubtes } from './ui.js';
 import { openTrenesView, handleTrenesListInteraction, getStationLineFromRamales, ensureTrenesLineasLoaded, ensureTrenesRamalesLoaded } from './trenes.js';
+import { fetchColectivosData, getColectivosRoutes, getParadasByRoute, getAgencyIdByRoute } from './colectivos.js';
 
+;
 const TRANSPORT_DATA_KEY = 'transportData';
 const views = Array.from(document.querySelectorAll('.view'));
 const navLinks = Array.from(document.querySelectorAll('.bottom-nav .nav-link'));
@@ -17,11 +19,7 @@ let buscarTransportData = [];
 let soloColectivosCurrentPage = 1;
 const SOLO_COLECTIVOS_PAGE_SIZE = 10;
 let soloColectivosTripData = [];
-let staticSubteData = null;
-let subtesData = { Entity: [] };
-let subtesCurrentPage = 1;
-const SUBTES_PAGE_SIZE = 10;
-let subtesDataArray = [];
+let subtesTripData = [];
 let currentDetailData = null;
 let currentDetailSource = null;
 
@@ -46,6 +44,7 @@ function navigateTo(viewName) {
   const target = validViews.includes(viewName) ? viewName : 'home';
   window.location.hash = target;
 }
+window.navigateTo = navigateTo; // Expuesto globalmente
 
 const TRAIN_STATIONS_CACHE_KEY = 'trainStationsCache';
 
@@ -77,7 +76,7 @@ function getActiveListData(listId) {
     case 'soloColectivosList':
       return { data: soloColectivosTripData, source: 'solo-colectivos' };
     case 'subtesList':
-      return { data: subtesDataArray, source: 'subtes' };
+      return { data: subtesTripData, source: 'subtes' };
     case 'searchResults':
       return { data: buscarTransportData, source: 'buscar' };
     case 'trenesList':
@@ -91,15 +90,15 @@ function refreshFavoriteAwareViews() {
   const currentView = getViewFromHash();
 
   if (currentView === 'colectivos' && colectivosTripData.length > 0) {
-    renderColectivosLines(colectivosTripData, colectivosCurrentPage);
+    renderColectivos(colectivosTripData, 'colectivosList');
   }
 
   if (currentView === 'solo-colectivos' && soloColectivosTripData.length > 0) {
     renderSoloColectivosLines(soloColectivosTripData, soloColectivosCurrentPage);
   }
 
-  if (currentView === 'subtes' && subtesDataArray.length > 0) {
-    renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
+  if (currentView === 'subtes' && subtesTripData.length > 0) {
+    renderSubtes(subtesTripData, 'subtesList');
   }
 
   if (currentView === 'buscar' && buscarTransportData.length > 0) {
@@ -111,17 +110,14 @@ function refreshFavoriteAwareViews() {
   }
 
   if (currentView === 'detalle' && currentDetailData) {
-    renderLineDetails(currentDetailData, currentDetailSource || 'detalle', staticSubteData);
+    renderLineDetails(currentDetailData, currentDetailSource || 'detalle');
   }
 }
 
 function renderViewForName(viewName, transportData) {
   switch (viewName) {
     case 'colectivos':
-      if (transportData) colectivosTripData = transportData;
-      if (colectivosTripData.length > 0) {
-        renderColectivosLines(colectivosTripData, colectivosCurrentPage);
-      }
+      openColectivosView();
       break;
     case 'solo-colectivos':
       if (transportData) soloColectivosTripData = transportData;
@@ -130,9 +126,7 @@ function renderViewForName(viewName, transportData) {
       }
       break;
     case 'subtes':
-      if (subtesDataArray.length > 0) {
-        renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
-      }
+      openSubtesView();
       break;
     case 'trenes':
       openTrenesView(navigateTo);
@@ -147,7 +141,7 @@ function renderViewForName(viewName, transportData) {
       break;
     case 'detalle':
       if (currentDetailData) {
-        renderLineDetails(currentDetailData, currentDetailSource || 'detalle', staticSubteData);
+        renderLineDetails(currentDetailData, currentDetailSource || 'detalle');
       }
       break;
     default:
@@ -204,10 +198,9 @@ function parseTripsContent(text) {
 }
 
 async function openColectivosView() {
-  const transportData = await ensureTransportData();
-  colectivosCurrentPage = 1;
-  colectivosTripData = transportData || [];
-  renderColectivosLines(colectivosTripData, colectivosCurrentPage);
+  const { routes } = await fetchColectivosData();
+  colectivosTripData = routes;
+  renderColectivos(routes, 'colectivosList');
   navigateTo('colectivos');
 }
 
@@ -219,7 +212,7 @@ async function openSoloColectivosView() {
   navigateTo('solo-colectivos');
 }
 
-function handleLineClick(event) {
+async function handleLineClick(event) {
   const listId = event.currentTarget.id;
 
   if (listId === 'trenesList' && handleTrenesListInteraction(event)) {
@@ -256,7 +249,7 @@ function handleLineClick(event) {
     if (action === 'open-favorite') {
       currentDetailData = favoriteRecord.data;
       currentDetailSource = favoriteRecord.source || 'favoritos';
-      renderLineDetails(currentDetailData, currentDetailSource, staticSubteData);
+      renderLineDetails(currentDetailData, currentDetailSource);
       navigateTo('detalle');
     }
 
@@ -285,16 +278,55 @@ function handleLineClick(event) {
   }
 
   if (action === 'line-detail') {
-    const routeId = actionButton.dataset.routeId;
-    currentDetailData = { isRouteLevel: true, routeId: routeId, entities: subtesDataArray };
-    currentDetailSource = source;
-    renderLineDetails(currentDetailData, currentDetailSource, staticSubteData);
-    navigateTo('detalle');
-    return;
+    const btnType = actionButton.dataset.type;
+    if (btnType === 'colectivo') {
+      const tripId = actionButton.dataset.tripId;
+      const paradas = getParadasByRoute(tripId) || [];
+      const routes = getColectivosRoutes();
+      const routeInfo = routes.find(r => String(r.route_id) === String(tripId)) || {};
+      
+      const agencyId = getAgencyIdByRoute(tripId);
+      let realTimeActive = [];
+      try {
+        realTimeActive = await getColectivosRealTime(tripId, agencyId);
+      } catch (error) {
+        console.error('Error al obtener posiciones en tiempo real:', error);
+      }
+
+      currentDetailData = { isStaticColectivo: true, routeId: tripId, paradas, routeInfo, realTimeActive };
+      currentDetailSource = 'colectivos';
+      renderLineDetails(currentDetailData, 'colectivos');
+      window.navigateTo('detalle');
+      return;
+    }
+
+    if (btnType === 'subte') {
+      const tripId = actionButton.dataset.tripId;
+      const paradas = getParadasBySubteRoute(tripId) || [];
+      const routes = getSubtesRoutes();
+      const routeInfo = routes.find(r => String(r.route_id) === String(tripId)) || {};
+
+      currentDetailData = { isStaticSubte: true, routeId: tripId, paradas, routeInfo };
+      currentDetailSource = 'subtes';
+      renderLineDetails(currentDetailData, 'subtes');
+      navigateTo('detalle');
+      return;
+    } else {
+      const lineData = dataArray.find(item => String(item._ui_id) === tripId || String(item.id || item.route_id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || item.vehicle?.id || item.Linea?.Trip_Id) === tripId);
+      if (lineData) {
+        currentDetailData = lineData;
+        currentDetailSource = source;
+        renderLineDetails(lineData, source);
+        navigateTo('detalle');
+      } else {
+        console.warn(`No se encontró información para el viaje con ID: ${tripId}`);
+      }
+      return;
+    }
   }
 
   if (action === 'favorite') {
-    const lineData = dataArray.find(item => String(item._ui_id) === tripId || String(item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || item.vehicle?.id || item.Linea?.Trip_Id) === tripId);
+    const lineData = dataArray.find(item => String(item._ui_id) === tripId || String(item.id || item.route_id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || item.vehicle?.id || item.Linea?.Trip_Id) === tripId);
     if (lineData) {
       toggleFavoriteItem(lineData, source);
       refreshFavoriteAwareViews();
@@ -302,12 +334,12 @@ function handleLineClick(event) {
     return;
   }
 
-  const lineData = dataArray.find(item => String(item._ui_id) === tripId || String(item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || item.vehicle?.id || item.Linea?.Trip_Id) === tripId);
+  const lineData = dataArray.find(item => String(item._ui_id) === tripId || String(item.id || item.route_id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || item.vehicle?.id || item.Linea?.Trip_Id) === tripId);
 
   if (lineData) {
     currentDetailData = lineData;
     currentDetailSource = source;
-    renderLineDetails(lineData, source, staticSubteData);
+    renderLineDetails(lineData, source);
     navigateTo('detalle');
   } else {
     console.warn(`No se encontró información para el viaje con ID: ${tripId}`);
@@ -355,7 +387,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   setActiveView(getViewFromHash());
   initHeaderOnScroll();
 
-  staticSubteData = await fetchStaticSubteData();
   await ensureTrenesLineasLoaded();
   await ensureTrenesRamalesLoaded();
 
@@ -381,10 +412,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const detalleBackBtn = document.getElementById('detalleBackBtn');
   const subtesBackBtn = document.getElementById('subtesBackBtn');
   const subtesList = document.getElementById('subtesList');
-  const subtesPrevBtn = document.getElementById('subtesPrevBtn');
-  const subtesNextBtn = document.getElementById('subtesNextBtn');
-  const subtesPrev10Btn = document.getElementById('subtesPrev10Btn');
-  const subtesNext10Btn = document.getElementById('subtesNext10Btn');
 
   colectivosList?.addEventListener('click', handleLineClick);
   soloColectivosList?.addEventListener('click', handleLineClick);
@@ -393,7 +420,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   favoritesSection?.addEventListener('click', handleLineClick);
 
   detalleBackBtn?.addEventListener('click', () => {
-    window.history.back();
+    if (currentDetailSource === 'colectivos' || currentDetailSource === 'solo-colectivos') {
+      navigateTo('colectivos');
+    } else if (currentDetailSource === 'subtes') {
+      navigateTo('subtes');
+    } else if (currentDetailSource === 'trenes') {
+      navigateTo('trenes');
+    } else if (currentDetailSource === 'buscar') {
+      navigateTo('buscar');
+    } else if (currentDetailSource === 'favoritos') {
+      navigateTo('favoritos');
+    } else {
+      window.history.back();
+    }
   });
 
   favoritesSection?.addEventListener('click', event => {
@@ -429,11 +468,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  homeColectivosCard?.addEventListener('click', () => openSoloColectivosView());
+  homeColectivosCard?.addEventListener('click', () => openColectivosView());
   homeColectivosCard?.addEventListener('keydown', event => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      openSoloColectivosView();
+      openColectivosView();
     }
   });
 
@@ -446,27 +485,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   async function openSubtesView() {
+    const routes = await fetchSubtesData();
+    subtesTripData = routes;
+    renderSubtes(routes, 'subtesList');
     navigateTo('subtes');
-    if (staticSubteData) {
-      try {
-        const apiResponse = await getSubtesForecastGTFS();
-        subtesData = enrichSubteRealTimeData(apiResponse, staticSubteData);
-        subtesDataArray = subtesData.Entity || subtesData.entity || [];
-        subtesCurrentPage = 1;
-        renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
-      } catch (e) {
-        console.error('Error cargando API de subtes, usando mock:', e);
-        try {
-          const mockResponse = await fetch('./mock/mock_subtes.json').then(r => r.json());
-          subtesData = enrichSubteRealTimeData(mockResponse, staticSubteData);
-          subtesDataArray = subtesData.Entity || subtesData.entity || [];
-          subtesCurrentPage = 1;
-          renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
-        } catch (mockErr) {
-          console.error('Error al cargar datos de subtes (API y mock):', mockErr);
-        }
-      }
-    }
   }
   
   homeFavoritesCard?.addEventListener('click', () => navigateTo('favoritos'));
@@ -530,6 +552,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const soloColectivosPrev10Btn = document.getElementById('soloColectivosPrev10Btn');
   const soloColectivosNext10Btn = document.getElementById('soloColectivosNext10Btn');
 
+  colectivosBackBtn?.addEventListener('click', () => {
+    navigateTo('home');
+  });
+
   soloColectivosBackBtn?.addEventListener('click', () => {
     navigateTo('home');
   });
@@ -566,32 +592,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   subtesBackBtn?.addEventListener('click', () => {
     navigateTo('home');
-  });
-
-  subtesPrevBtn?.addEventListener('click', () => {
-    if (subtesCurrentPage > 1) {
-      subtesCurrentPage -= 1;
-      renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
-    }
-  });
-
-  subtesNextBtn?.addEventListener('click', () => {
-    const totalPages = Math.max(1, Math.ceil(subtesDataArray.length / SUBTES_PAGE_SIZE));
-    if (subtesCurrentPage < totalPages) {
-      subtesCurrentPage += 1;
-      renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
-    }
-  });
-
-  subtesPrev10Btn?.addEventListener('click', () => {
-    subtesCurrentPage = Math.max(1, subtesCurrentPage - 10);
-    renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
-  });
-
-  subtesNext10Btn?.addEventListener('click', () => {
-    const totalPages = Math.max(1, Math.ceil(subtesDataArray.length / SUBTES_PAGE_SIZE));
-    subtesCurrentPage = Math.min(totalPages, subtesCurrentPage + 10);
-    renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
   });
 
   renderViewForName(getViewFromHash(), transportData);

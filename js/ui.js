@@ -1,100 +1,39 @@
 
 import { getFavoriteItems, isFavoriteItem } from './storage.js';
-import { generateTripStopListHTML } from './subtes.js';
 
-export function renderSubtes(data, containerId, staticData = null) {
+export function renderSubtes(routes, containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Soportamos tanto 'entity' estándar como 'Entity' del mock
-    const entities = data.entity || data.Entity || [];
-    const routes = staticData?.routes || [];
-    const trips = staticData?.trips || [];
+    container.innerHTML = '';
 
-    if (routes.length === 0) {
-        container.innerHTML = '<p class="empty">Cargando rutas de subte...</p>';
+    if (!routes || routes.length === 0) {
+        container.innerHTML = '<p class="empty">No se encontraron líneas de subtes.</p>';
         return;
     }
 
-    const favs = getFavoriteItems();
-
-    const cardsHTML = routes.map(route => {
-        const routeEntities = entities.filter(e => {
-            const eRouteId = e.Linea?.Route_Id || e.trip_update?.trip?.route_id || e.trip?.route_id;
-            return eRouteId === route.id;
-        });
-
-        if (routeEntities.length === 0) {
-            return `
-                <article class="line-card transport-card" data-route-id="${route.id}" style="border-left: 4px solid #${route.color};">
-                    <div class="transport-card-main" style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px; width: 100%; text-align: left; background: transparent; border: none;">
-                        <div class="line-card-main" style="width: 100%;">
-                            <div>
-                                <p class="line-number" style="color: #${route.color};">Línea ${route.short_name}</p>
-                                <p class="line-subtitle">${route.long_name}</p>
-                            </div>
+    container.innerHTML = routes.map(route => {
+        const isFav = isFavoriteItem(route, 'subtes');
+        return `
+            <article class="line-card transport-card color-placeholder" data-trip-id="${route.route_id}" data-route-id="${route.route_id}" data-source="subtes" style="position: relative; border-left: 5px solid #${route.route_color};">
+                <button type="button" class="transport-card-main" data-card-action="line-detail" data-trip-id="${route.route_id}" data-route-id="${route.route_id}" data-type="subte" style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px; cursor: pointer; border: none; background: transparent; font-family: inherit; width: 100%; text-align: left;">
+                    <div class="line-card-main" style="width: 100%;">
+                        <div>
+                            <p class="line-number" style="color: #${route.route_text_color}; background-color: #${route.route_color}; padding: 2px 8px; border-radius: 4px; display: inline-block;">Línea ${route.route_short_name}</p>
+                            <p class="line-subtitle">${route.route_long_name}</p>
                         </div>
-                        <p class="line-meta">Sin trenes circulando ahora</p>
-                        <button type="button" class="secondary-btn line-action" data-card-action="line-detail" data-route-id="${route.id}" style="margin-top: 8px;">Detalles</button>
                     </div>
-                </article>
-            `;
-        }
-
-        return routeEntities.map(item => {
-            const linea = item.Linea || {};
-            const trip = item.trip_update?.trip || item.trip || {};
-            const tripId = linea.Trip_Id || trip.trip_id || item.id || item.ID || 'Desconocido';
-            
-            const favoriteId = `subtes:${String(route.id).toLowerCase()}:${String(tripId).toLowerCase()}`;
-            const isFav = favs.some(f => f.favoriteId === favoriteId);
-
-            // Usamos el destino enriquecido que ya trae el "Hacia "
-            const headsign = linea.headsign || trip.trip_headsign || 'Destino desconocido';
-
-            const estaciones = item.trip_update?.stop_time_update || item.stop_time_update || linea.Estaciones || [];
-
-            const estacionesHTML = estaciones.map(estacion => {
-                const stopName = estacion.stop_name || estacion.stop_id;
-                const arrivalDelay = estacion.arrival?.delay || 0;
-                const arrivalTimeUnix = estacion.arrival?.time;
-                let timeStr = 'Sin tiempo';
-                
-                if (arrivalTimeUnix) {
-                    const dt = new Date(arrivalTimeUnix * 1000);
-                    timeStr = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                }
-                
-                // Cálculo del delay en minutos para formato "+X min"
-                const delayMinutes = Math.round(arrivalDelay / 60);
-                const delayStr = delayMinutes > 0 ? ` <strong class="text-danger">(+${delayMinutes} min)</strong>` : '';
-
-                return `<p class="line-meta">• ${stopName}: <strong>${timeStr}</strong>${delayStr}</p>`;
-            }).join('');
-
-            return `
-                <article class="line-card transport-card" data-trip-id="${tripId}" data-route-id="${route.id}" data-source="subtes" style="border-left: 4px solid #${route.color}; position: relative;">
-                    <button type="button" class="transport-card-main" data-card-action="open" style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px; cursor: pointer; border: none; background: transparent; font-family: inherit; width: 100%; text-align: left;">
-                        <div class="line-card-main" style="width: 100%;">
-                            <div>
-                                <p class="line-number" style="color: #${route.color};">Línea ${route.short_name}</p>
-                                <p class="line-subtitle">Destino: ${headsign}</p>
-                            </div>
-                        </div>
-                        <div style="width: 100%; display: flex; flex-direction: column; gap: 4px;">${estacionesHTML || '<p class="line-meta">No hay estaciones listadas.</p>'}</div>
-                    </button>
-                    <div style="padding: 0 16px 16px;">
-                        <button type="button" class="secondary-btn line-action" data-card-action="line-detail" data-route-id="${route.id}">Detalles</button>
-                    </div>
-                    <button type="button" class="favorite-toggle ${isFav ? 'is-active' : ''}" data-card-action="favorite" aria-pressed="${isFav}" aria-label="${isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}" style="position: absolute; right: 16px; top: 16px;">
-                        ${isFav ? '★' : '☆'}
-                    </button>
-                </article>
-            `;
-        }).join('');
+                    <p class="line-meta">Frecuencia estimada: ${Math.round(route.headway_secs / 60)} min</p>
+                </button>
+                <div style="padding: 0 16px 16px;">
+                    <button type="button" class="secondary-btn line-action" data-card-action="line-detail" data-trip-id="${route.route_id}" data-route-id="${route.route_id}" data-type="subte">Detalles</button>
+                </div>
+                <button type="button" class="favorite-toggle ${isFav ? 'is-active' : ''}" data-card-action="favorite" data-trip-id="${route.route_id}" aria-pressed="${isFav}" aria-label="${isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}" style="position: absolute; right: 16px; top: 16px;">
+                    ${isFav ? '★' : '☆'}
+                </button>
+            </article>
+        `;
     }).join('');
-
-    container.innerHTML = cardsHTML;
 }
 
 export function getItemTripId(item) {
@@ -180,31 +119,44 @@ export function renderFavoritesView() {
   `;
 }
 
-function updatePaginationControls(prefix, currentPage, totalItems, pageSize) {
-  const prev10Btn = document.getElementById(`${prefix}Prev10Btn`);
-  const prevBtn = document.getElementById(`${prefix}PrevBtn`);
-  const nextBtn = document.getElementById(`${prefix}NextBtn`);
-  const next10Btn = document.getElementById(`${prefix}Next10Btn`);
-  const pageLabel = document.getElementById(`${prefix}PageLabel`);
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+// En js/ui.js
+export function renderColectivos(routes, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
 
-  if (prev10Btn) prev10Btn.disabled = currentPage <= 1;
-  if (prevBtn) prevBtn.disabled = currentPage <= 1;
-  if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
-  if (next10Btn) next10Btn.disabled = currentPage >= totalPages;
-  if (pageLabel) pageLabel.textContent = `${currentPage} de ${totalPages}`;
+    container.innerHTML = ''; // Limpiamos
+
+    if (!routes || routes.length === 0) {
+        container.innerHTML = '<p class="empty">No se encontraron rutas de colectivos.</p>';
+        return;
+    }
+
+    container.innerHTML = routes.map(route => {
+        const isFav = isFavoriteItem(route, 'colectivos');
+        return `
+            <article class="line-card transport-card color-placeholder" data-trip-id="${route.route_id}" data-route-id="${route.route_id}" data-source="colectivos" style="position: relative; border-left: 5px solid #${route.route_color || '00b37e'};">
+                <button type="button" class="transport-card-main" data-card-action="line-detail" data-trip-id="${route.route_id}" data-route-id="${route.route_id}" data-type="colectivo" style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px; cursor: pointer; border: none; background: transparent; font-family: inherit; width: 100%; text-align: left;">
+                    <div class="line-card-main" style="width: 100%;">
+                        <div>
+                            <p class="line-number">Línea ${route.route_short_name}</p>
+                            <p class="line-subtitle">${route.route_long_name || 'Ramales varios'}</p>
+                        </div>
+                    </div>
+                </button>
+                <div style="padding: 0 16px 16px;">
+                    <button type="button" class="secondary-btn line-action" data-card-action="line-detail" data-trip-id="${route.route_id}" data-route-id="${route.route_id}" data-type="colectivo">Detalles</button>
+                </div>
+                <button type="button" class="favorite-toggle ${isFav ? 'is-active' : ''}" data-card-action="favorite" data-trip-id="${route.route_id}" aria-pressed="${isFav}" aria-label="${isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}" style="position: absolute; right: 16px; top: 16px;">
+                    ${isFav ? '★' : '☆'}
+                </button>
+            </article>
+        `;
+    }).join('');
 }
 
 export function renderColectivosLines(data, page = 1) {
   const listContainer = document.getElementById('colectivosList');
   if (!listContainer) return;
-
-  const COLECTIVOS_PAGE_SIZE = 10;
-  if (!Array.isArray(data) || data.length === 0) {
-    listContainer.innerHTML = '<p class="empty">No se encontraron líneas de colectivos.</p>';
-    updatePaginationControls('colectivos', page, 0, COLECTIVOS_PAGE_SIZE);
-    return;
-  }
 
   const startIndex = (page - 1) * COLECTIVOS_PAGE_SIZE;
   const pageData = data.slice(startIndex, startIndex + COLECTIVOS_PAGE_SIZE);
@@ -312,18 +264,22 @@ export function renderSoloColectivosLines(data, page = 1) {
 }
 
 export function renderSubtesLines(data, page = 1, staticSubteData = null) {
-  let normalizedData = [];
-  if (Array.isArray(data)) normalizedData = data;
-  else if (data && Array.isArray(data.entity)) normalizedData = data.entity;
-  else if (data && Array.isArray(data.Entity)) normalizedData = data.Entity;
+  // Removido tras la actualización de alta fidelidad estática
+}
 
-  // Aumentamos el pageSize a 50 para que muestre todos los arribos de todas las líneas en una vista
-  const SUBTES_PAGE_SIZE = 50;
-  const startIndex = (page - 1) * SUBTES_PAGE_SIZE;
-  const pageData = normalizedData.slice(startIndex, startIndex + SUBTES_PAGE_SIZE);
-  
-  renderSubtes({ Entity: pageData }, 'subtesList', staticSubteData);
-  updatePaginationControls('subtes', page, normalizedData.length, SUBTES_PAGE_SIZE);
+function updatePaginationControls(prefix, currentPage, totalItems, pageSize) {
+  const prev10Btn = document.getElementById(`${prefix}Prev10Btn`);
+  const prevBtn = document.getElementById(`${prefix}PrevBtn`);
+  const nextBtn = document.getElementById(`${prefix}NextBtn`);
+  const next10Btn = document.getElementById(`${prefix}Next10Btn`);
+  const pageLabel = document.getElementById(`${prefix}PageLabel`);
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+  if (prev10Btn) prev10Btn.disabled = currentPage <= 1;
+  if (prevBtn) prevBtn.disabled = currentPage <= 1;
+  if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+  if (next10Btn) next10Btn.disabled = currentPage >= totalPages;
+  if (pageLabel) pageLabel.textContent = `${currentPage} de ${totalPages}`;
 }
 
 export function renderSearchResults(data, page = 1) {
@@ -373,85 +329,108 @@ export function renderSearchResults(data, page = 1) {
 
 export function renderLineDetails(data, source = 'detalle', staticSubteData) {
   const container = document.getElementById('detalleContent');
+  const detalleHero = document.getElementById('detalleHero');
+  const detalleTitle = document.getElementById('detalleTitle');
+  const detalleSubtitle = document.getElementById('detalleSubtitle');
+
   if (!container) return;
 
-  // Renderizado a nivel línea (Ruta entera de subte filtrada)
-  if (data?.isRouteLevel) {
-    const routeId = data.routeId;
-    const routeInfo = staticSubteData?.routes?.find(r => r.id === routeId) || { short_name: routeId, long_name: '', color: 'ccc' };
-    const routeEntities = (data.entities || []).filter(e => {
-        const eRouteId = e.Linea?.Route_Id || e.trip_update?.trip?.route_id || e.trip?.route_id;
-        return eRouteId === routeId;
-    });
+  // Limpiar el contenido anterior para asegurar una carga limpia
+  container.innerHTML = '';
 
-    const activeTrainsHTML = routeEntities.length === 0 
-      ? '<p class="line-meta">Sin trenes circulando ahora</p>'
-      : routeEntities.map(item => {
-          const tripId = item.Linea?.Trip_Id || item.trip_update?.trip?.trip_id || item.id || 'Desconocido';
-          const headsign = item.Linea?.headsign || item.trip_update?.trip?.trip_headsign || 'Destino desconocido';
-          const estaciones = item.trip_update?.stop_time_update || item.Linea?.Estaciones || [];
-          const nextStop = estaciones[0];
-          const stopName = nextStop?.stop_name || nextStop?.stop_id || 'Desconocido';
-          const delay = nextStop?.arrival?.delay || 0;
-          const time = nextStop?.arrival?.time ? new Date(nextStop.arrival.time * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
-          
+  // Renderizado a nivel línea (Ruta entera de colectivo estática)
+  if (data?.isStaticColectivo) {
+    const { routeId, paradas, routeInfo, realTimeActive } = data;
+    const routeName = routeInfo?.route_short_name || routeId;
+    const routeLongName = routeInfo?.route_long_name || 'Recorrido';
+    
+    if (detalleHero) {
+        detalleHero.style.backgroundColor = '#00b37e';
+        detalleHero.style.color = '#ffffff';
+    }
+    if (detalleTitle) detalleTitle.textContent = `Línea ${routeName}`;
+    if (detalleSubtitle) detalleSubtitle.textContent = `Colectivo · ${routeLongName}`;
+
+    const paradasHTML = (!paradas || paradas.length === 0)
+      ? '<p class="line-meta">No hay paradas registradas para esta línea.</p>'
+      : `<div class="train-stops-list">` + paradas.map(p => {
+          const stopName = p.stop_name || p;
+          const stopTime = p.time ? `<p class="line-meta">Hora estimada: <strong>${p.time}</strong></p>` : '';
           return `
-            <div style="border-left: 3px solid #${routeInfo.color}; padding-left: 8px; margin-bottom: 12px;">
-              <p class="status-title" style="font-size: 1rem;">Viaje ${tripId}</p>
-              <p class="line-subtitle">${headsign}</p>
-              ${time ? `<p class="line-meta">Próxima parada: ${stopName} a las ${time} ${delay > 0 ? `(+${Math.round(delay/60)} min)` : ''}</p>` : ''}
-            </div>
-          `;
-        }).join('');
+          <article class="train-stop-item" style="padding-left: 11px; margin-bottom: 8px; border-left: 3px solid #00b37e;">
+              <p class="status-title" style="font-size: 0.95rem;">🚌 ${stopName}</p>
+              ${stopTime}
+          </article>
+        `}).join('') + `</div>`;
+
+    let activeList = [];
+    if (Array.isArray(realTimeActive)) activeList = realTimeActive;
+    else if (realTimeActive?.entity) activeList = realTimeActive.entity;
+    else if (realTimeActive?.Entity) activeList = realTimeActive.Entity;
+
+    let realTimeHTML = '<p class="line-meta">No hay unidades reportando posición en este momento</p>';
+    if (activeList && activeList.length > 0) {
+      realTimeHTML = `<div class="train-stops-list">` + activeList.map(unit => {
+        const lat = unit.vehicle?.position?.latitude;
+        const lon = unit.vehicle?.position?.longitude;
+        const vId = unit.vehicle?.vehicle?.id || 'Desconocido';
+        return `
+          <article class="train-stop-item" style="padding-left: 11px; margin-bottom: 8px; border-left: 3px solid #00b37e;">
+              <p class="status-title" style="font-size: 0.95rem;">📍 Unidad ${vId}</p>
+              <p class="line-meta">Lat: ${lat?.toFixed(4)} | Lon: ${lon?.toFixed(4)}</p>
+          </article>
+        `;
+      }).join('') + `</div>`;
+    }
 
     container.innerHTML = `
       <div class="detail-actions">
-        <button type="button" class="secondary-btn" disabled>Línea Completa</button>
+        <button type="button" class="secondary-btn" disabled>Recorrido Completo</button>
       </div>
-      <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px; border-top: 4px solid #${routeInfo.color};">
-        <p class="status-title" style="font-size: 1.25rem; color: #${routeInfo.color};">Línea ${routeInfo.short_name}</p>
-        <p class="line-subtitle">${routeInfo.long_name}</p>
+      <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px; width: 100%;">
+        <p class="status-title">Unidades en Tiempo Real</p>
+        ${realTimeHTML}
       </article>
       <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px; width: 100%;">
-        <p class="status-title">Trenes en circulación</p>
-        ${activeTrainsHTML}
+        <p class="status-title">Itinerario y Paradas</p>
+        ${paradasHTML}
       </article>
     `;
     return;
   }
 
-  // Detectar si es un viaje individual de subte (mock o API en tiempo real)
-  const isSubte = source === 'subtes' || data?.Linea || data?.trip_update?.trip?.route_id?.startsWith('Linea');
-  if (isSubte) {
-    const linea = data?.Linea || {};
-    const tripUpdate = data?.trip_update || {};
-    const trip = tripUpdate.trip || data?.trip || {};
-
-    const routeId = linea.Route_Id || trip.route_id || data?.route_id || 'Subte';
-    const tripId = linea.Trip_Id || trip.trip_id || data?.id || 'Desconocido';
-    const headsign = linea.headsign || trip.trip_headsign || 'Desconocido';
+  // Renderizado a nivel línea (Ruta entera de subte estática)
+  if (data?.isStaticSubte) {
+    const { routeId, paradas, routeInfo } = data;
+    const routeName = routeInfo?.route_short_name || routeId;
+    const routeLongName = routeInfo?.route_long_name || 'Recorrido';
+    const color = routeInfo?.route_color || 'ccc';
+    const textColor = routeInfo?.route_text_color || 'ffffff';
     
-    const routeInfo = staticSubteData?.routes?.find(r => r.id === routeId) || { short_name: routeId.replace('Linea', ''), long_name: '', color: 'ccc' };
-    const realTimeStops = tripUpdate.stop_time_update || linea.Estaciones || [];
+    if (detalleHero) {
+        detalleHero.style.backgroundColor = `#${color}`;
+        detalleHero.style.color = `#${textColor}`;
+    }
+    if (detalleTitle) detalleTitle.textContent = `Línea ${routeName}`;
+    if (detalleSubtitle) detalleSubtitle.textContent = `Subte · ${routeLongName}`;
 
-    const stopListHTML = generateTripStopListHTML(tripId, staticSubteData, realTimeStops);
+    const paradasHTML = (!paradas || paradas.length === 0)
+      ? '<p class="line-meta">No hay paradas registradas para esta línea.</p>'
+      : `<div class="train-stops-list">` + paradas.map(p => `
+          <article class="train-stop-item" style="padding-left: 11px; margin-bottom: 8px; border-left: 3px solid #${color};">
+              <p class="status-title" style="font-size: 0.95rem;">🚇 ${p.stop_name || p}</p>
+          </article>
+        `).join('') + `</div>`;
+
     const favoriteActive = isFavoriteItem(data, source);
 
     container.innerHTML = `
       <div class="detail-actions">
         <button type="button" class="secondary-btn ${favoriteActive ? 'favorite-active' : ''}" data-card-action="favorite-detail" aria-pressed="${favoriteActive}">${favoriteActive ? 'Quitar de favoritos' : 'Guardar en favoritos'}</button>
       </div>
-      <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px; border-top: 4px solid #${routeInfo.color};">
-        <p class="status-title" style="font-size: 1.5rem; color: #${routeInfo.color}; font-weight: bold;">Línea ${routeInfo.short_name}</p>
-        <p class="line-subtitle">Destino: ${headsign}</p>
-      </article>
-      <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-        <p class="status-title">Información del Viaje</p>
-        <p class="line-meta"><strong>ID Viaje:</strong> ${tripId}</p>
-      </article>
       <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px; width: 100%;">
-        <p class="status-title">Itinerario y Paradas</p>
-        ${stopListHTML}
+        <p class="status-title">Recorrido y Paradas</p>
+        ${paradasHTML}
       </article>
     `;
     return;
@@ -481,14 +460,17 @@ export function renderLineDetails(data, source = 'detalle', staticSubteData) {
   const displayRoute = routeName.replace(/l[ií]nea/i, '').replace(/_/g, ' ').trim();
   const favoriteActive = isFavoriteItem(data, source);
 
+  if (detalleHero) {
+      detalleHero.style.backgroundColor = ''; // Restablecer al color por defecto de CSS
+      detalleHero.style.color = ''; // Restablecer al color por defecto de CSS
+  }
+  if (detalleTitle) detalleTitle.textContent = `Línea ${displayRoute === 'Sin línea' ? 'Sin línea' : displayRoute}`;
+  if (detalleSubtitle) detalleSubtitle.textContent = `${tripHeadsign}${directionLabel ? ` · ${directionLabel}` : ''}`;
+
   container.innerHTML = `
     <div class="detail-actions">
       <button type="button" class="secondary-btn ${favoriteActive ? 'favorite-active' : ''}" data-card-action="favorite-detail" aria-pressed="${favoriteActive}">${favoriteActive ? 'Quitar de favoritos' : 'Guardar en favoritos'}</button>
     </div>
-    <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-      <p class="status-title" style="font-size: 1.25rem;">Línea ${displayRoute === 'Sin línea' ? 'Sin línea' : displayRoute}</p>
-      <p class="line-subtitle">${tripHeadsign}${directionLabel ? ` · ${directionLabel}` : ''}</p>
-    </article>
     <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
       <p class="status-title">Información del Vehículo</p>
       <p class="line-meta"><strong>ID Vehículo:</strong> ${vehicleId}</p>

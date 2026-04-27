@@ -32,6 +32,13 @@ export async function getVehiclePositions() {
   return await fetchTransportData('colectivos', 'vehiclePositionsSimple');
 }
 
+export async function getColectivosRealTime(routeId, agencyId) {
+  const params = {};
+  if (routeId) params.route_id = routeId;
+  if (agencyId) params.agency_id = agencyId;
+  return await fetchTransportData('colectivos', 'vehiclePositionsSimple', params);
+}
+
 export async function getVehiclePositionsDetailed(params = {}) {
   return await fetchTransportData('colectivos', 'vehiclePositions', { json: 1, ...params });
 }

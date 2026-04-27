@@ -137,13 +137,6 @@
           <div id="subtesList" class="results-list">
             <p class="empty">Cargando datos de subtes...</p>
           </div>
-          <div id="subtesPagination" class="pagination-controls">
-            <button id="subtesPrev10Btn" class="secondary-btn" type="button" disabled>–10</button>
-            <button id="subtesPrevBtn" class="secondary-btn" type="button" disabled>-1</button>
-            <span id="subtesPageLabel">1 de 1</span>
-            <button id="subtesNextBtn" class="secondary-btn" type="button" disabled>+1</button>
-            <button id="subtesNext10Btn" class="secondary-btn" type="button" disabled>+10</button>
-          </div>
         </div>
       </section>
 
@@ -185,14 +178,18 @@
       </section>
 
       <section id="view-detalle" class="view">
-        <div class="hero-card">
-          <button id="detalleBackBtn" class="link-button" type="button">← Volver</button>
-          <h2>Detalle del Colectivo</h2>
-          <p class="hero-text">Información en tiempo real de la unidad seleccionada.</p>
+        <div id="detalleHero" class="hero-card" style="transition: background-color 0.3s ease, color 0.3s ease;">
+          <button id="detalleBackBtn" class="link-button" type="button" style="color: inherit; opacity: 0.9;">← Volver</button>
+          <h2 id="detalleTitle">Detalle de Línea</h2>
+          <p id="detalleSubtitle" class="hero-text" style="color: inherit; opacity: 0.9;">Información del recorrido.</p>
           <div id="detalleContent" class="status-list" style="margin-top: 1rem;">
             <!-- Detalle inyectado desde JS -->
           </div>
         </div>
+      </section>
+
+      <section id="view-favoritos" class="view">
+        <!-- Renderizado dinámicamente desde JS -->
       </section>
 
       <section id="view-historial" class="view">
