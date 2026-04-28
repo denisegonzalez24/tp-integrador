@@ -1,8 +1,9 @@
-﻿import { getVehiclePositions, getColectivosRealTime, getSubtesRealTime } from './api.js';
+﻿﻿import { getVehiclePositions, getColectivosRealTime, getSubtesRealTime } from './api.js';
 import { saveData, loadData, toggleFavoriteItem, removeFavoriteItem, getFavoriteItems } from './storage.js';
 import { renderFavoritesView,renderColectivos, renderColectivosLines, renderSoloColectivosLines, renderSearchResults, renderLineDetails, renderSubtes } from './ui.js';
 import { openTrenesView, handleTrenesListInteraction, getStationLineFromRamales, ensureTrenesLineasLoaded, ensureTrenesRamalesLoaded } from './trenes.js';
 import { fetchSubtesData, getSubtesRoutes, getParadasBySubteRoute } from './subtes.js';
+import { fetchColectivosData, getColectivosRoutes, getParadasByRoute, getAgencyIdByRoute } from './colectivos.js';
 
 const TRANSPORT_DATA_KEY = 'transportData';
 let colectivosCurrentPage = 1;
@@ -70,7 +71,7 @@ function refreshFavoriteAwareViews() {
   const currentView = getViewFromHash();
 
   if (currentView === 'colectivos' && soloColectivosTripData.length > 0) {
-    renderSoloColectivosLines(soloColectivosTripData, soloColectivosCurrentPage);
+    renderColectivos(soloColectivosTripData, 'soloColectivosList');
   }
 
   if (currentView === 'subtes' && subtesTripData.length > 0) {
@@ -168,10 +169,10 @@ function parseTripsContent(text) {
 }
 
 async function openColectivosView() {
-  const transportData = await ensureTransportData();
+  const { routes } = await fetchColectivosData();
   soloColectivosCurrentPage = 1;
-  soloColectivosTripData = transportData || [];
-  renderSoloColectivosLines(soloColectivosTripData, soloColectivosCurrentPage);
+  soloColectivosTripData = routes || [];
+  renderColectivos(soloColectivosTripData, 'soloColectivosList');
   navigateTo('colectivos');
 }
 
@@ -264,6 +265,24 @@ async function handleLineClick(event) {
 
       currentDetailData = { isStaticSubte: true, routeId: tripId, paradas, routeInfo, realTimeSubte };
       currentDetailSource = 'subtes';
+      navigateTo('detalle');
+      return;
+    } else if (btnType === 'colectivo') {
+      const routeId = actionButton.dataset.routeId;
+      const paradas = getParadasByRoute(routeId) || [];
+      const routes = getColectivosRoutes();
+      const routeInfo = routes.find(r => String(r.route_id) === String(routeId)) || {};
+      const agencyId = getAgencyIdByRoute(routeId);
+
+      let realTimeActive = null;
+      try {
+        realTimeActive = await getColectivosRealTime(routeId, agencyId);
+      } catch (error) {
+        console.error('Error al obtener tiempo real de colectivos:', error);
+      }
+
+      currentDetailData = { isStaticColectivo: true, routeId, paradas, routeInfo, realTimeActive };
+      currentDetailSource = 'colectivos';
       navigateTo('detalle');
       return;
     } else {
@@ -487,7 +506,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   soloColectivosPrevBtn?.addEventListener('click', () => {
     if (soloColectivosCurrentPage > 1) {
       soloColectivosCurrentPage -= 1;
-      renderSoloColectivosLines(soloColectivosTripData, soloColectivosCurrentPage);
+      renderColectivos(soloColectivosTripData, 'soloColectivosList');
     }
   });
 
@@ -495,14 +514,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const totalPages = Math.max(1, Math.ceil(soloColectivosTripData.length / SOLO_COLECTIVOS_PAGE_SIZE));
     if (soloColectivosCurrentPage < totalPages) {
       soloColectivosCurrentPage += 1;
-      renderSoloColectivosLines(soloColectivosTripData, soloColectivosCurrentPage);
+      renderColectivos(soloColectivosTripData, 'soloColectivosList');
     }
   });
 
   soloColectivosPrev10Btn?.addEventListener('click', () => {
     if (soloColectivosCurrentPage > 1) {
       soloColectivosCurrentPage = Math.max(1, soloColectivosCurrentPage - 10);
-      renderSoloColectivosLines(soloColectivosTripData, soloColectivosCurrentPage);
+      renderColectivos(soloColectivosTripData, 'soloColectivosList');
     }
   });
 
@@ -510,7 +529,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const totalPages = Math.max(1, Math.ceil(soloColectivosTripData.length / SOLO_COLECTIVOS_PAGE_SIZE));
     if (soloColectivosCurrentPage < totalPages) {
       soloColectivosCurrentPage = Math.min(totalPages, soloColectivosCurrentPage + 10);
-      renderSoloColectivosLines(soloColectivosTripData, soloColectivosCurrentPage);
+      renderColectivos(soloColectivosTripData, 'soloColectivosList');
     }
   });
 
