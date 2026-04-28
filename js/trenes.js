@@ -9,8 +9,8 @@ const RAMALES_MAP = {
     131: 'San Martin',
 };
 
-const TRENES_LINEAS_JSON_PATH = './data/trenes/trenes-lineas.json';
-const TRENES_RAMALES_JSON_PATH = './data/trenes/trenes-ramales.json';
+const TRENES_LINEAS_JSON_PATH = './datos/trenes-lineas.json';
+const TRENES_RAMALES_JSON_PATH = './datos/trenes-ramales.json';
 const HISTORY_STORAGE_KEY = 'searchHistoryItems';
 const HISTORY_LIMIT = 20;
 
@@ -80,7 +80,7 @@ function normalizeTrenesResponse(payload) {
     return [];
 }
 
-export async function ensureTrenesLineasLoaded() {
+async function ensureTrenesLineasLoaded() {
     if (trenesLineasLoaded && Array.isArray(trenesLineas) && trenesLineas.length > 0) {
         return;
     }
@@ -100,7 +100,7 @@ export async function ensureTrenesLineasLoaded() {
     }
 }
 
-export async function ensureTrenesRamalesLoaded() {
+async function ensureTrenesRamalesLoaded() {
     if (trenesRamalesLoaded && Array.isArray(trenesRamales) && trenesRamales.length > 0) {
         return;
     }
@@ -140,20 +140,11 @@ function renderRamalStationsButtons(stations = []) {
         const stationName = estacion?.nombre || 'Estacion';
 
         return `
-            <article class="line-card transport-card color-placeholder" data-station-id="${stationId}" data-source="trenes" style="position: relative;">
-                <button type="button" class="transport-card-main" data-card-action="open-station" style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px; cursor: pointer; border: none; background: transparent; font-family: inherit; width: 100%; text-align: left;">
-                    <div class="line-card-main" style="width: 100%;">
-                        <div>
-                            <p class="line-number">${stationName}</p>
-                            <p class="line-subtitle">Estación de tren</p>
-                        </div>
-                    </div>
-                </button>
-                <div style="padding: 0 16px 16px;">
-                    <button type="button" class="secondary-btn line-action" data-card-action="open-station" data-station-id="${stationId}">Ver detalle</button>
-                </div>
-            </article>
-        `;
+      <button type="button" class="train-station-card" data-card-action="open-station" data-station-id="${stationId}">
+        <span class="train-station-name">${stationName}</span>
+        <span class="train-station-action">Ver detalle</span>
+      </button>
+    `;
     }).join('');
 }
 

@@ -37,6 +37,29 @@ export async function fetchTransportData(transportType, endpoint, params = {}) {
   return data;
 }
 
+async function fetchTransportDataWithRetry(transportType, endpoint, params = {}, retryOptions = {}) {
+  const {
+    retries = 2,
+    delayMs = 500,
+  } = retryOptions;
+
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await fetchTransportData(transportType, endpoint, params);
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < retries) {
+        await new Promise(resolve => setTimeout(resolve, delayMs * (attempt + 1)));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 export async function getVehiclePositions() {
   return await fetchTransportData('colectivos', 'vehiclePositionsSimple');
 }
@@ -56,7 +79,53 @@ export async function getColectivosRealTime(routeId, agencyId) {
 
 // Nueva función para Subtes (Devuelve JSON con próximos arribos)
 export async function getSubtesForecast() {
-  return await fetchTransportData('subtes', 'forecastGTFS');
+  return await fetchTransportDataWithRetry('subtes', 'forecastGTFS', {}, {
+    retries: 2,
+    delayMs: 600,
+  });
+}
+
+export async function getSubtesServiceAlerts(params = {}) {
+  return await fetchTransportData('subtes', 'serviceAlerts', params);
+}
+
+function buildTrenesUrl(path, params = {}) {
+  const url = new URL(`${TRENES_API_HOST}/${path}`);
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      url.searchParams.set(key, value);
+    }
+  });
+
+  return url.toString();
+}
+
+async function fetchTrenesData(path, params = {}) {
+  const url = buildTrenesUrl(path, params);
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Error HTTP ${response.status} - ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+export async function getTrainStationsByName(nombre) {
+  return await fetchTrenesData('infraestructura/estaciones', { nombre });
+}
+
+export async function getTrainStationsByRamal(idRamal) {
+  return await fetchTrenesData('infraestructura/estaciones', { idRamal });
+}
+
+export async function getTrainArrivalsByStation(idEstacion, cantidad = 5, sentido = null) {
+  return await fetchTrenesData(`arribos/estacion/${idEstacion}`, { cantidad, sentido });
+}
+
+export async function getTrainRamales() {
+  return await fetchTrenesData('infraestructura/ramales', {});
 }
 
 // Nueva función para Subtes RT: Convierte el feed a JSON manejable

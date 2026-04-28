@@ -1,0 +1,133 @@
+[
+    {
+        "id": 11,
+        "id_empresa": 1,
+        "nombre": "Roca",
+        "estado": {
+            "id": 13,
+            "mensaje": "Alertas por ramal",
+            "color": "#435a6c"
+        },
+        "alerta": []
+    },
+    {
+        "id": 1,
+        "id_empresa": 1,
+        "nombre": "Sarmiento",
+        "estado": {
+            "id": 13,
+            "mensaje": "Alertas por ramal",
+            "color": "#435a6c"
+        },
+        "alerta": [
+            {
+                "id": 88867,
+                "linea_id": 1,
+                "ramal_id": null,
+                "estacion_id": null,
+                "sentido": null,
+                "causa_gtfs": "OTHER_CAUSE",
+                "efecto_gtfs": "OTHER_EFFECT",
+                "icono_fontawesome": "fa-warning",
+                "contenido": "Los trenes hacia Once se detienen en un anden provisorio de la estacion Moron, con acceso por las calles Sarmiento y Azcuenaga. Mas informacion en trenesargentinos.gob.ar",
+                "habilitado": 1,
+                "vigencia_desde": "2026-03-25 00:01:00",
+                "vigencia_hasta": null,
+                "criticidad_orden": 4,
+                "criticidad_color_fondo": "#dff0d8",
+                "criticidad_color_texto": "#3c763d"
+            }
+        ]
+    },
+    {
+        "id": 5,
+        "id_empresa": 1,
+        "nombre": "Mitre",
+        "estado": {
+            "id": 13,
+            "mensaje": "Alertas por ramal",
+            "color": "#435a6c"
+        },
+        "alerta": []
+    },
+    {
+        "id": 31,
+        "id_empresa": 1,
+        "nombre": "San Martin",
+        "estado": {
+            "id": 13,
+            "mensaje": "Alertas por ramal",
+            "color": "#435a6c"
+        },
+        "alerta": [
+            {
+                "id": 89430,
+                "linea_id": 31,
+                "ramal_id": null,
+                "estacion_id": null,
+                "sentido": null,
+                "causa_gtfs": "OTHER_CAUSE",
+                "efecto_gtfs": "OTHER_EFFECT",
+                "icono_fontawesome": "fa-warning",
+                "contenido": "Si necesitas tramitar una credencial estudiantil, podes acercarte a la estacion San Miguel del 13/4 al 24/4 de 7 a 19 h o al Centro de Atencion al Pasajero en Retiro San Martin, de lunes a viernes de 7 a 19 h. Mas informacion trenesargentinos.gob.ar.",
+                "habilitado": 1,
+                "vigencia_desde": "2026-04-04 00:01:00",
+                "vigencia_hasta": "2026-04-24 19:00:00",
+                "criticidad_orden": 4,
+                "criticidad_color_fondo": "#dff0d8",
+                "criticidad_color_texto": "#3c763d"
+            }
+        ]
+    },
+    {
+        "id": 21,
+        "id_empresa": 1,
+        "nombre": "Belgrano Sur",
+        "estado": {
+            "id": 13,
+            "mensaje": "Alertas por ramal",
+            "color": "#435a6c"
+        },
+        "alerta": []
+    },
+    {
+        "id": 41,
+        "id_empresa": 1,
+        "nombre": "Tren de la Costa",
+        "estado": {
+            "id": 13,
+            "mensaje": "Alertas por ramal",
+            "color": "#435a6c"
+        },
+        "alerta": [
+            {
+                "id": 90320,
+                "linea_id": 41,
+                "ramal_id": null,
+                "estacion_id": null,
+                "sentido": null,
+                "causa_gtfs": "OTHER_CAUSE",
+                "efecto_gtfs": "OTHER_EFFECT",
+                "icono_fontawesome": "fa-warning",
+                "contenido": "Hasta el 3/5 el Tren de la Costa estara interrumpido por obras en zona de vias. Consulta las alternativas de viaje en trenesargentinos.gob.ar",
+                "habilitado": 1,
+                "vigencia_desde": "2026-04-21 12:44:00",
+                "vigencia_hasta": "2026-05-03 23:59:00",
+                "criticidad_orden": 4,
+                "criticidad_color_fondo": "#dff0d8",
+                "criticidad_color_texto": "#3c763d"
+            }
+        ]
+    },
+    {
+        "id": 501,
+        "id_empresa": 1,
+        "nombre": "Regionales",
+        "estado": {
+            "id": 13,
+            "mensaje": "Alertas por ramal",
+            "color": "#435a6c"
+        },
+        "alerta": []
+    }
+]

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle de estacion de subte | Viajero AMBA</title>
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+
+<body>
+    <div class="app-shell">
+        <main>
+            <section class="view active">
+                <div class="hero-card">
+                    <button id="subteDetailBackBtn" class="link-button" type="button">← Volver</button>
+                    <h2 id="subteDetailTitle">Proximos subtes</h2>
+                    <p class="hero-text" id="subteDetailStationInfo">Consulta en tiempo real los proximos arribos.</p>
+
+                    <div id="subteDetailFilters" style="margin: 16px 0;"></div>
+
+                    <div id="subteDetailState" class="status-list" style="margin-top: 1rem;">
+                        <p class="empty">Cargando detalle...</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module" src="./js/subte-detail.js"></script>
+</body>
+
+</html>
