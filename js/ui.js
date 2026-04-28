@@ -401,7 +401,7 @@ export function renderLineDetails(data, source = 'detalle', staticSubteData) {
 
   // Renderizado a nivel línea (Ruta entera de subte estática)
   if (data?.isStaticSubte) {
-    const { routeId, paradas, routeInfo } = data;
+    const { routeId, paradas, routeInfo, realTimeSubte } = data;
     const routeName = routeInfo?.route_short_name || routeId;
     const routeLongName = routeInfo?.route_long_name || 'Recorrido';
     const color = routeInfo?.route_color || 'ccc';
@@ -414,13 +414,49 @@ export function renderLineDetails(data, source = 'detalle', staticSubteData) {
     if (detalleTitle) detalleTitle.textContent = `Línea ${routeName}`;
     if (detalleSubtitle) detalleSubtitle.textContent = `Subte · ${routeLongName}`;
 
+    const rtEntities = realTimeSubte?.Entity || realTimeSubte?.entity || [];
+    const rtByStop = {};
+    
+    // Procesamos el JSON mapeando los tiempos por stop_id
+    rtEntities.forEach(ent => {
+      const tripUpdate = ent.TripUpdate || ent.trip_update || ent.tripUpdate;
+      if (tripUpdate) {
+        const tRouteId = tripUpdate.Trip?.RouteId || tripUpdate.trip?.route_id || tripUpdate.trip?.routeId || '';
+        if (String(tRouteId).toUpperCase().includes(String(routeId).toUpperCase()) || String(routeId).toUpperCase().includes(String(tRouteId).toUpperCase())) {
+          const stopUpdates = tripUpdate.StopTimeUpdate || tripUpdate.stop_time_update || tripUpdate.stopTimeUpdate || [];
+          stopUpdates.forEach(stu => {
+            const sId = stu.StopId || stu.stop_id || stu.stopId;
+            const arrTime = stu.Arrival?.Time || stu.arrival?.time;
+            if (sId && arrTime) {
+              if (!rtByStop[sId]) rtByStop[sId] = [];
+              rtByStop[sId].push(arrTime);
+            }
+          });
+        }
+      }
+    });
+
+    const freqText = routeInfo?.headway_secs ? `~${Math.round(routeInfo.headway_secs / 60)} min` : 'Sin datos';
+
     const paradasHTML = (!paradas || paradas.length === 0)
       ? '<p class="line-meta">No hay paradas registradas para esta línea.</p>'
-      : `<div class="train-stops-list">` + paradas.map(p => `
+      : `<div class="train-stops-list">` + paradas.map(p => {
+          const stopId = p.stop_id || '';
+          let timeHTML = `<p class="line-meta">Frecuencia habitual: ${freqText}</p>`;
+          
+          if (stopId && rtByStop[stopId] && rtByStop[stopId].length > 0) {
+            const nextArrivals = rtByStop[stopId].filter(t => t * 1000 > Date.now()).sort((a, b) => a - b);
+            if (nextArrivals.length > 0) {
+              const diffMins = Math.max(0, Math.floor(((nextArrivals[0] * 1000) - Date.now()) / 60000));
+              timeHTML = `<p class="line-meta" style="color: #${color}; font-weight: bold;">Próximo tren: en ${diffMins} min</p>`;
+            }
+          }
+          return `
           <article class="train-stop-item" style="padding-left: 11px; margin-bottom: 8px; border-left: 3px solid #${color};">
               <p class="status-title" style="font-size: 0.95rem;">🚇 ${p.stop_name || p}</p>
+              ${timeHTML}
           </article>
-        `).join('') + `</div>`;
+        `}).join('') + `</div>`;
 
     const favoriteActive = isFavoriteItem(data, source);
 

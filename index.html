@@ -93,25 +93,6 @@
       <section id="view-colectivos" class="view">
         <div class="hero-card">
           <div class="hero-icon" aria-hidden="true">🚌</div>
-          <h2>Colectivos disponibles</h2>
-          <p class="hero-text">Seleccioná una línea para ver su recorrido y estado.</p>
-          <button id="colectivosBackBtn" class="link-button" type="button">← Volver</button>
-          <div id="colectivosList" class="results-list">
-            <p class="empty">Cargando líneas de colectivos...</p>
-          </div>
-          <div id="colectivosPagination" class="pagination-controls">
-            <button id="colectivosPrev10Btn" class="secondary-btn" type="button" disabled>–10</button>
-            <button id="colectivosPrevBtn" class="secondary-btn" type="button" disabled>-1</button>
-            <span id="colectivosPageLabel">1 de 43641</span>
-            <button id="colectivosNextBtn" class="secondary-btn" type="button" disabled>+1</button>
-            <button id="colectivosNext10Btn" class="secondary-btn" type="button" disabled>+10</button>
-          </div>
-        </div>
-      </section>
-
-      <section id="view-solo-colectivos" class="view">
-        <div class="hero-card">
-          <div class="hero-icon" aria-hidden="true">🚌</div>
           <h2>Vista exclusiva de Colectivos</h2>
           <p class="hero-text">Esta es una vista dedicada únicamente a los colectivos.</p>
           <button id="soloColectivosBackBtn" class="link-button" type="button">← Volver</button>
@@ -177,14 +158,17 @@
         </div>
       </section>
 
-      <section id="view-detalle" class="view">
-        <div id="detalleHero" class="hero-card" style="transition: background-color 0.3s ease, color 0.3s ease;">
-          <button id="detalleBackBtn" class="link-button" type="button" style="color: inherit; opacity: 0.9;">← Volver</button>
-          <h2 id="detalleTitle">Detalle de Línea</h2>
-          <p id="detalleSubtitle" class="hero-text" style="color: inherit; opacity: 0.9;">Información del recorrido.</p>
-          <div id="detalleContent" class="status-list" style="margin-top: 1rem;">
-            <!-- Detalle inyectado desde JS -->
-          </div>
+      <section id="view-detalle" class="view" style="background-color: #ffffff;">
+        <div id="detalleHero" class="hero-card" style="background-color: #5B6B7F; color: #333333; border-bottom: 1px solid #e0e0e0;">
+          <button id="detalleBackBtn" class="link-button" type="button" style="color: #333333;">← Volver</button>
+          <h2 id="detalleTitle" style="color: #333333;">Detalle de Línea</h2>
+          <p id="detalleSubtitle" class="hero-text" style="color: #333333;">Información del recorrido.</p>
+        </div>
+        <div id="detalleContent" class="status-list" style="background-color: #ffffff; color: #111111; padding: 1.5rem 1rem;">
+          <!-- Detalle inyectado desde JS -->
+        </div>
+        <div id="detalleActions" style="background-color: #f5f5f5; color: #333333; border-top: 1px solid #e0e0e0; padding: 1.5rem 1rem; text-align: center;">
+          <!-- Contenedor para acciones/botones inyectados por JS -->
         </div>
       </section>
 

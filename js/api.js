@@ -1,10 +1,12 @@
 const API_HOST = "https://datosabiertos-transporte-apis.buenosaires.gob.ar";
+const SUBTES_API_HOST = "https://apitransporte.buenosaires.gob.ar";
 const CLIENT_ID = "8251a8610a63446c9c090f6d04edc491";
 const CLIENT_SECRET = "b754F8057Ad54DA3a81eD95261d4A7EB";
 const TRENES_API_HOST = "https://ariedro.dev/api-trenes";
 
 function buildUrl(transportType, endpoint, params = {}) {
-  const url = new URL(`${API_HOST}/${transportType}/${endpoint}`);
+  const host = transportType === 'subtes' ? SUBTES_API_HOST : API_HOST;
+  const url = new URL(`${host}/${transportType}/${endpoint}`);
   url.searchParams.set('client_id', CLIENT_ID);
   url.searchParams.set('client_secret', CLIENT_SECRET);
 
@@ -13,6 +15,11 @@ function buildUrl(transportType, endpoint, params = {}) {
       url.searchParams.set(key, value);
     }
   });
+
+  // Usamos un proxy CORS público para evitar el bloqueo del navegador al consultar subtes
+  if (transportType === 'subtes') {
+    return `https://corsproxy.io/?${encodeURIComponent(url.toString())}`;
+  }
 
   return url.toString();
 }
@@ -25,18 +32,13 @@ export async function fetchTransportData(transportType, endpoint, params = {}) {
     throw new Error(`Error HTTP ${response.status} - ${response.statusText}`);
   }
 
-  return await response.json();
+  const data = await response.json();
+  console.log(`[API] Respuesta de ${transportType}/${endpoint}:`, data);
+  return data;
 }
 
 export async function getVehiclePositions() {
   return await fetchTransportData('colectivos', 'vehiclePositionsSimple');
-}
-
-export async function getColectivosRealTime(routeId, agencyId) {
-  const params = {};
-  if (routeId) params.route_id = routeId;
-  if (agencyId) params.agency_id = agencyId;
-  return await fetchTransportData('colectivos', 'vehiclePositionsSimple', params);
 }
 
 export async function getVehiclePositionsDetailed(params = {}) {
@@ -47,16 +49,20 @@ export async function getArribosPorLinea(lineaId) {
   return await fetchTransportData('colectivos', `lineas/${lineaId}/arribos`);
 }
 
-export async function getSubtesForecastGTFS() {
-  const url = new URL('https://apitransporte.buenosaires.gob.ar/subtes/forecastGTFS');
-  url.searchParams.set('client_id', CLIENT_ID);
-  url.searchParams.set('client_secret', CLIENT_SECRET);
+// Nueva función para obtener el tiempo real de una línea de colectivo particular
+export async function getColectivosRealTime(routeId, agencyId) {
+  return await getVehiclePositionsDetailed({ route_id: routeId, agency_id: agencyId });
+}
 
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Error HTTP ${response.status} - ${response.statusText}`);
-  }
-  return await response.json();
+// Nueva función para Subtes (Devuelve JSON con próximos arribos)
+export async function getSubtesForecast() {
+  return await fetchTransportData('subtes', 'forecastGTFS');
+}
+
+// Nueva función para Subtes RT: Convierte el feed a JSON manejable
+export async function getSubtesRealTime(params = {}) {
+  // Usamos json=1 para asegurarnos de que la API traduzca el Protocol Buffer a JSON
+  return await fetchTransportData('subtes', 'forecastGTFS', { json: 1, ...params });
 }
 
 function buildTrenesUrl(path, params = {}) {
