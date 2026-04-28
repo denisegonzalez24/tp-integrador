@@ -1,11 +1,13 @@
-﻿﻿import { getVehiclePositions, getColectivosRealTime, getSubtesRealTime } from './api.js';
+<<<<<<< HEAD
+﻿import { getVehiclePositions, getSubtesForecastGTFS } from './api.js';
 import { saveData, loadData, toggleFavoriteItem, removeFavoriteItem, getFavoriteItems } from './storage.js';
-import { renderFavoritesView,renderColectivos, renderColectivosLines, renderSoloColectivosLines, renderSearchResults, renderLineDetails, renderSubtes } from './ui.js';
-import { openTrenesView, handleTrenesListInteraction, getStationLineFromRamales, ensureTrenesLineasLoaded, ensureTrenesRamalesLoaded } from './trenes.js';
-import { fetchSubtesData, getSubtesRoutes, getParadasBySubteRoute } from './subtes.js';
-import { fetchColectivosData, getColectivosRoutes, getParadasByRoute, getAgencyIdByRoute } from './colectivos.js';
+import { fetchStaticSubteData, enrichSubteRealTimeData } from './subtes.js';
+import { renderFavoritesView, renderColectivosLines, renderSoloColectivosLines, renderSubtesLines, renderSearchResults, renderLineDetails, renderSubtes } from './ui.js';
 
 const TRANSPORT_DATA_KEY = 'transportData';
+const views = Array.from(document.querySelectorAll('.view'));
+const navLinks = Array.from(document.querySelectorAll('.bottom-nav .nav-link'));
+const validViews = views.map(view => view.id.replace('view-', ''));
 let colectivosCurrentPage = 1;
 const COLECTIVOS_PAGE_SIZE = 10;
 let colectivosTripData = [];
@@ -15,7 +17,12 @@ let buscarTransportData = [];
 let soloColectivosCurrentPage = 1;
 const SOLO_COLECTIVOS_PAGE_SIZE = 10;
 let soloColectivosTripData = [];
-let subtesTripData = [];
+let staticSubteData = null;
+let subtesData = { Entity: [] };
+let subtesCurrentPage = 1;
+const SUBTES_PAGE_SIZE = 10;
+let subtesDataArray = [];
+=======
 ﻿import { getVehiclePositions } from './api.js';
 import { saveData, loadData } from './storage.js';
 import { openTrenesView, handleTrenesListInteraction, getStationLineFromRamales } from './trenes.js';
@@ -35,7 +42,6 @@ import {
   openSubtesView,
   loadSubtesData,
   bindSubtesControls,
-  handleSubtesListInteraction,
   getSubtesData,
   getSubtesCurrentPage,
   refreshSubtesView,
@@ -72,110 +78,34 @@ const TRAIN_STATIONS_CACHE_KEY = 'trainStationsCache';
 const views = Array.from(document.querySelectorAll('.view'));
 const navLinks = Array.from(document.querySelectorAll('.bottom-nav .nav-link'));
 const validViews = views.map(view => view.id.replace('view-', ''));
+>>>>>>> upstream/prueba-trenes
 let currentDetailData = null;
 let currentDetailSource = null;
 
 function getViewFromHash() {
   const hash = window.location.hash.slice(1).toLowerCase();
-  return document.getElementById(`view-${hash}`) ? hash : 'home';
+  return validViews.includes(hash) ? hash : 'home';
 }
 
 function setActiveView(viewName) {
   const targetId = `view-${viewName}`;
 
-  document.querySelectorAll('.view').forEach(view => {
+  views.forEach(view => {
     view.classList.toggle('active', view.id === targetId);
   });
 
-  document.querySelectorAll('.bottom-nav .nav-link').forEach(link => {
+  navLinks.forEach(link => {
     link.classList.toggle('nav-link-active', link.dataset.view === viewName);
   });
 }
 
 function navigateTo(viewName) {
-  const target = document.getElementById(`view-${viewName}`) ? viewName : 'home';
+  const target = validViews.includes(viewName) ? viewName : 'home';
   window.location.hash = target;
 }
-window.navigateTo = navigateTo; // Expuesto globalmente
 
-const TRAIN_STATIONS_CACHE_KEY = 'trainStationsCache';
-
-function getCachedTrainStations() {
-  const cached = loadData(TRAIN_STATIONS_CACHE_KEY);
-  return Array.isArray(cached) ? cached : [];
-}
-
-
-function getActiveListData(listId) {
-  switch (listId) {
-    case 'colectivosList':
-      return { data: colectivosTripData, source: 'colectivos' };
-    case 'soloColectivosList':
-      return { data: soloColectivosTripData, source: 'solo-colectivos' };
-    case 'subtesList':
-      return { data: subtesTripData, source: 'subtes' };
-    case 'searchResults':
-      return { data: buscarTransportData, source: 'buscar' };
-    case 'trenesList':
-      return { data: [], source: 'trenes' };
-    default:
-      return { data: [], source: 'desconocido' };
-  }
-}
-
-function refreshFavoriteAwareViews() {
-  const currentView = getViewFromHash();
-
-  if (currentView === 'colectivos' && soloColectivosTripData.length > 0) {
-    renderColectivos(soloColectivosTripData, 'soloColectivosList');
-  }
-
-  if (currentView === 'subtes' && subtesTripData.length > 0) {
-    renderSubtes(subtesTripData, 'subtesList');
-  }
-
-  if (currentView === 'buscar' && buscarTransportData.length > 0) {
-    renderSearchResults(buscarTransportData, buscarCurrentPage);
-  }
-
-  if (currentView === 'favoritos') {
-    renderFavoritesView();
-  }
-
-  if (currentView === 'detalle' && currentDetailData) {
-    renderLineDetails(currentDetailData, currentDetailSource || 'detalle');
-  }
-}
-
-function renderViewForName(viewName, transportData) {
-  switch (viewName) {
-    case 'colectivos':
-      openColectivosView();
-      break;
-    case 'subtes':
-      openSubtesView();
-      break;
-    case 'trenes':
-      openTrenesView(navigateTo);
-      break;
-    case 'buscar':
-      if (buscarTransportData.length > 0) {
-        renderSearchResults(buscarTransportData, buscarCurrentPage);
-      }
-      break;
-    case 'favoritos':
-      renderFavoritesView();
-      break;
-    case 'detalle':
-      if (currentDetailData) {
-        renderLineDetails(currentDetailData, currentDetailSource || 'detalle');
-      }
-      break;
-    default:
-      break;
-  }
-}
-
+<<<<<<< HEAD
+=======
 function persistTrainStationsCache(stations) {
   const existing = loadData(TRAIN_STATIONS_CACHE_KEY);
   const base = Array.isArray(existing) ? existing : [];
@@ -197,6 +127,7 @@ function loadTrainStationsCache() {
   return Array.isArray(cached) ? cached : [];
 }
 
+>>>>>>> upstream/prueba-trenes
 function getActiveListData(listId) {
   switch (listId) {
     case 'colectivosList':
@@ -212,67 +143,8 @@ function getActiveListData(listId) {
   }
 }
 
-async function openColectivosView() {
-  const { routes } = await fetchColectivosData();
-  soloColectivosCurrentPage = 1;
-  soloColectivosTripData = routes || [];
-  renderColectivos(soloColectivosTripData, 'soloColectivosList');
-  navigateTo('colectivos');
-}
-
-async function openSubtesView() {
-  const routes = await fetchSubtesData();
-  subtesTripData = routes;
-  renderSubtes(routes, 'subtesList');
-  navigateTo('subtes');
-}
-
-async function handleLineClick(event) {
-  const listId = event.currentTarget.id;
-
-  if (listId === 'trenesList' && handleTrenesListInteraction(event)) {
-    return;
-  }
-
-  const actionButton = event.target.closest('[data-card-action]');
-  if (!actionButton) {
-    return;
-  }
-
-  const action = actionButton.dataset.cardAction;
-
-  if (action === 'favorite-detail') {
-    if (currentDetailData) {
-      toggleFavoriteItem(currentDetailData, currentDetailSource || 'detalle');
-      refreshFavoriteAwareViews();
-    }
-    return;
-  }
-
-  if (listId === 'view-favoritos' || listId === 'favoritesList') {
-    const favoriteCard = event.target.closest('[data-favorite-id]');
-    if (!favoriteCard) {
-      return;
-    }
-
-    const favoriteItems = getFavoriteItems();
-    const favoriteRecord = favoriteItems.find(item => item.favoriteId === favoriteCard.dataset.favoriteId);
-    if (!favoriteRecord) {
-      return;
-    }
-
-    if (action === 'open-favorite') {
-      currentDetailData = favoriteRecord.data;
-      currentDetailSource = favoriteRecord.source || 'favoritos';
-      renderLineDetails(currentDetailData, currentDetailSource);
-      navigateTo('detalle');
-    }
-
-    if (action === 'remove-favorite') {
-      removeFavoriteItem(favoriteRecord.favoriteId);
-      refreshFavoriteAwareViews();
-    }
-    return;
+<<<<<<< HEAD
+=======
 function getItemTripId(item) {
   return item?._ui_id || item?.id || item?.trip?.trip_id || item?.trip_id || item?.vehicle?.vehicle?.id || item?.vehicle?.id || '';
 }
@@ -360,6 +232,7 @@ function openHistoryRecordFromHome(historyId) {
   navigateTo('detalle');
 }
 
+>>>>>>> upstream/prueba-trenes
 function refreshFavoriteAwareViews() {
   const currentView = getViewFromHash();
 
@@ -373,8 +246,13 @@ function refreshFavoriteAwareViews() {
     renderSoloColectivosLines(getSoloColectivosTripData(), getSoloColectivosCurrentPage(), renderTransportCard);
   }
 
+<<<<<<< HEAD
+  if (currentView === 'subtes' && subtesDataArray.length > 0) {
+    renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
+=======
   if (currentView === 'subtes' && getSubtesData().length > 0) {
     refreshSubtesView(renderTransportCard);
+>>>>>>> upstream/prueba-trenes
   }
 
   if (currentView === 'buscar' && getSearchData().length > 0) {
@@ -390,13 +268,29 @@ function refreshFavoriteAwareViews() {
   }
 
   if (currentView === 'detalle' && currentDetailData) {
-    renderLineDetails(currentDetailData, currentDetailSource || 'detalle');
+    renderLineDetails(currentDetailData, currentDetailSource || 'detalle', staticSubteData);
   }
 }
 
 function renderViewForName(viewName, transportData) {
   switch (viewName) {
     case 'colectivos':
+<<<<<<< HEAD
+      if (transportData) colectivosTripData = transportData;
+      if (colectivosTripData.length > 0) {
+        renderColectivosLines(colectivosTripData, colectivosCurrentPage);
+      }
+      break;
+    case 'solo-colectivos':
+      if (transportData) soloColectivosTripData = transportData;
+      if (soloColectivosTripData.length > 0) {
+        renderSoloColectivosLines(soloColectivosTripData, soloColectivosCurrentPage);
+      }
+      break;
+    case 'subtes':
+      if (subtesDataArray.length > 0) {
+        renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
+=======
       if (transportData) {
         renderColectivosLines(transportData, getColectivosCurrentPage(), renderTransportCard);
       } else if (getColectivosTripData().length > 0) {
@@ -413,6 +307,7 @@ function renderViewForName(viewName, transportData) {
     case 'subtes':
       if (getSubtesData().length > 0) {
         renderSubtesLines(getSubtesData(), getSubtesCurrentPage(), renderTransportCard);
+>>>>>>> upstream/prueba-trenes
       }
       break;
     case 'buscar':
@@ -428,7 +323,7 @@ function renderViewForName(viewName, transportData) {
       break;
     case 'detalle':
       if (currentDetailData) {
-        renderLineDetails(currentDetailData, currentDetailSource || 'detalle');
+        renderLineDetails(currentDetailData, currentDetailSource || 'detalle', staticSubteData);
       }
       break;
     default:
@@ -436,85 +331,70 @@ function renderViewForName(viewName, transportData) {
   }
 }
 
-  const clickedCard = event.target.closest('.transport-card');
-  if (!clickedCard) {
-    return;
-  }
-
-  const tripId = clickedCard.dataset.tripId;
-  if (!tripId) {
-    console.warn('La tarjeta no tiene un data-trip-id.');
-  }
-
-  const { data: dataArray, source } = getActiveListData(listId);
-  if (!Array.isArray(dataArray) || dataArray.length === 0) {
-    console.error('No se pudo determinar la lista de origen.');
-    return;
-  }
-
-  if (action === 'line-detail') {
-    const btnType = actionButton.dataset.type;
-
-    if (btnType === 'subte') {
-      const tripId = actionButton.dataset.tripId;
-      const paradas = getParadasBySubteRoute(tripId) || [];
-      const routes = getSubtesRoutes();
-      const routeInfo = routes.find(r => String(r.route_id) === String(tripId)) || {};
-
-      let realTimeSubte = null;
-      try {
-        realTimeSubte = await getSubtesRealTime();
-      } catch (error) {
-        console.error('Error al obtener posiciones en tiempo real de subtes:', error);
-      }
-
-      currentDetailData = { isStaticSubte: true, routeId: tripId, paradas, routeInfo, realTimeSubte };
-      currentDetailSource = 'subtes';
-      navigateTo('detalle');
-      return;
-    } else if (btnType === 'colectivo') {
-      const routeId = actionButton.dataset.routeId;
-      const paradas = getParadasByRoute(routeId) || [];
-      const routes = getColectivosRoutes();
-      const routeInfo = routes.find(r => String(r.route_id) === String(routeId)) || {};
-      const agencyId = getAgencyIdByRoute(routeId);
-
-      let realTimeActive = null;
-      try {
-        realTimeActive = await getColectivosRealTime(routeId, agencyId);
-      } catch (error) {
-        console.error('Error al obtener tiempo real de colectivos:', error);
-      }
-
-      currentDetailData = { isStaticColectivo: true, routeId, paradas, routeInfo, realTimeActive };
-      currentDetailSource = 'colectivos';
-      navigateTo('detalle');
-      return;
-    } else {
-      const lineData = dataArray.find(item => String(item._ui_id) === tripId || String(item.id || item.route_id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || item.vehicle?.id || item.Linea?.Trip_Id) === tripId);
-      if (lineData) {
-        currentDetailData = lineData;
-        currentDetailSource = source;
-        renderLineDetails(lineData, source);
-        navigateTo('detalle');
-      } else {
-        console.warn(`No se encontró información para el viaje con ID: ${tripId}`);
-      }
-      return;
-    }
-  }
-
-  if (action === 'favorite') {
-    const lineData = dataArray.find(item => String(item._ui_id) === tripId || String(item.id || item.route_id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || item.vehicle?.id || item.Linea?.Trip_Id) === tripId);
-    if (lineData) {
-      toggleFavoriteItem(lineData, source);
-      refreshFavoriteAwareViews();
 function handleNavClick(event) {
   event.preventDefault();
   const targetView = event.currentTarget.dataset.view;
   navigateTo(targetView);
 }
 
+<<<<<<< HEAD
+function parseCsvLine(line) {
+  const values = [];
+  let current = '';
+  let insideQuotes = false;
+
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    if (char === '"') {
+      insideQuotes = !insideQuotes;
+      continue;
+    }
+    if (char === ',' && !insideQuotes) {
+      values.push(current);
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+  values.push(current);
+  return values.map(value => value.trim());
+}
+
+function parseTripsContent(text) {
+  const lines = text
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+
+  if (lines.length <= 1) {
+    return [];
+  }
+
+  const headers = parseCsvLine(lines[0]);
+  return lines.slice(1).map(line => {
+    const values = parseCsvLine(line);
+    return headers.reduce((acc, header, index) => {
+      acc[header] = values[index] ?? '';
+      return acc;
+    }, {});
+  });
+}
+
+async function openColectivosView() {
+  const transportData = await ensureTransportData();
+  colectivosCurrentPage = 1;
+  colectivosTripData = transportData || [];
+  renderColectivosLines(colectivosTripData, colectivosCurrentPage);
+  navigateTo('colectivos');
+}
+
+async function openSoloColectivosView() {
+  const transportData = await ensureTransportData();
+  soloColectivosCurrentPage = 1;
+  soloColectivosTripData = transportData || [];
+  renderSoloColectivosLines(soloColectivosTripData, soloColectivosCurrentPage);
+  navigateTo('solo-colectivos');
+=======
 function renderLineDetails(data, source = 'detalle') {
   const container = document.getElementById('detalleContent');
   if (!container) return;
@@ -566,16 +446,13 @@ function renderLineDetails(data, source = 'detalle') {
       <p class="line-meta"><strong>Longitud:</strong> ${lon !== undefined ? lon.toFixed(5) : 'N/A'}</p>
     </article>
   `;
+>>>>>>> upstream/prueba-trenes
 }
 
 function handleLineClick(event) {
   const listId = event.currentTarget.id;
 
   if (listId === 'trenesList' && handleTrenesListInteraction(event)) {
-    return;
-  }
-
-  if (listId === 'subtesList' && handleSubtesListInteraction(event)) {
     return;
   }
 
@@ -590,11 +467,45 @@ function handleLineClick(event) {
 
   const action = actionButton.dataset.cardAction;
 
+<<<<<<< HEAD
+  if (action === 'favorite-detail') {
+    if (currentDetailData) {
+      toggleFavoriteItem(currentDetailData, currentDetailSource || 'detalle');
+      refreshFavoriteAwareViews();
+    }
+    return;
+  }
+
+  if (listId === 'view-favoritos' || listId === 'favoritesList') {
+    const favoriteCard = event.target.closest('[data-favorite-id]');
+    if (!favoriteCard) {
+      return;
+    }
+
+    const favoriteItems = getFavoriteItems();
+    const favoriteRecord = favoriteItems.find(item => item.favoriteId === favoriteCard.dataset.favoriteId);
+    if (!favoriteRecord) {
+      return;
+    }
+
+    if (action === 'open-favorite') {
+      currentDetailData = favoriteRecord.data;
+      currentDetailSource = favoriteRecord.source || 'favoritos';
+      renderLineDetails(currentDetailData, currentDetailSource, staticSubteData);
+      navigateTo('detalle');
+    }
+
+    if (action === 'remove-favorite') {
+      removeFavoriteItem(favoriteRecord.favoriteId);
+      refreshFavoriteAwareViews();
+    }
+=======
   if (listId === 'searchResults' && handleSearchResultsAction(event)) {
     return;
   }
 
   if ((listId === 'view-favoritos' || listId === 'favoritesList') && handleFavoritesClick(event)) {
+>>>>>>> upstream/prueba-trenes
     return;
   }
 
@@ -615,18 +526,30 @@ function handleLineClick(event) {
     return;
   }
 
+  if (action === 'line-detail') {
+    const routeId = actionButton.dataset.routeId;
+    currentDetailData = { isRouteLevel: true, routeId: routeId, entities: subtesDataArray };
+    currentDetailSource = source;
+    renderLineDetails(currentDetailData, currentDetailSource, staticSubteData);
+    navigateTo('detalle');
+    return;
+  }
+
   if (action === 'favorite') {
-    const lineData = dataArray.find(item => String(item._ui_id) === tripId || String(item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || item.vehicle?.id) === tripId);
+    const lineData = dataArray.find(item => String(item._ui_id) === tripId || String(item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || item.vehicle?.id || item.Linea?.Trip_Id) === tripId);
     if (lineData) {
       toggleFavoriteItem(lineData, source);
+      refreshFavoriteAwareViews();
     }
     return;
   }
 
-  const lineData = dataArray.find(item => String(item._ui_id) === tripId || String(item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || item.vehicle?.id) === tripId);
+  const lineData = dataArray.find(item => String(item._ui_id) === tripId || String(item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || item.vehicle?.id || item.Linea?.Trip_Id) === tripId);
 
   if (lineData) {
-    renderLineDetails(lineData, source);
+    currentDetailData = lineData;
+    currentDetailSource = source;
+    renderLineDetails(lineData, source, staticSubteData);
     navigateTo('detalle');
   } else {
     console.warn(`No se encontró información para el viaje con ID: ${tripId}`);
@@ -670,7 +593,6 @@ window.addEventListener('hashchange', async () => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
-  document.querySelectorAll('.bottom-nav .nav-link').forEach(link => link.addEventListener('click', handleNavClick));
   initFavoritesModule({
     loadData,
     saveData,
@@ -735,33 +657,36 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderLineDetails(data, source);
       navigateTo('detalle');
     },
-    openSubteStationDetail: (stationName, lineId = '', stationData = null) => {
-      if (stationData) {
-        addHistoryItem(stationData, 'subtes');
-      }
-      const params = new URLSearchParams({
-        station: stationName || '',
-        linea: lineId || '',
-      });
-      window.location.href = `./subte-detail.html?${params.toString()}`;
-    },
   });
 
   navLinks.forEach(link => link.addEventListener('click', handleNavClick));
   setActiveView(getViewFromHash());
   initHeaderOnScroll();
 
+<<<<<<< HEAD
+  staticSubteData = await fetchStaticSubteData();
+
+=======
+>>>>>>> upstream/prueba-trenes
   const homeSearchBtn = document.getElementById('homeSearchBtn');
   const searchButton = document.getElementById('searchButton');
   const searchInput = document.getElementById('searchInput');
   const buscarBackBtn = document.getElementById('buscarBackBtn');
   const searchTypeFilters = Array.from(document.querySelectorAll('[data-search-type]'));
   const homeColectivosCard = document.getElementById('homeColectivosCard');
+<<<<<<< HEAD
+  const homeSubtesCard = document.getElementById('homeSubtesCard');
+  const homeFavoritesCard = document.getElementById('homeFavoritesCard');
+  const colectivosBackBtn = document.getElementById('colectivosBackBtn');
+  const colectivosPrevBtn = document.getElementById('colectivosPrevBtn');
+  const colectivosNextBtn = document.getElementById('colectivosNextBtn');
+=======
   const homeTrenesCard = document.getElementById('homeTrenesCard');
   const homeFavoritesCard = document.getElementById('homeFavoritesCard');
   const homeSubtesCard = document.getElementById('homeSubtesCard');
   const homeHistoryViewAllBtn = document.getElementById('homeHistoryViewAllBtn');
   const homeHistoryPreview = document.getElementById('homeHistoryPreview');
+>>>>>>> upstream/prueba-trenes
 
   const colectivosList = document.getElementById('colectivosList');
   const soloColectivosList = document.getElementById('soloColectivosList');
@@ -770,12 +695,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const historySection = document.getElementById('view-historial');
   const detalleBackBtn = document.getElementById('detalleBackBtn');
   const subtesBackBtn = document.getElementById('subtesBackBtn');
-  const trenesBackBtn = document.getElementById('trenesBackBtn');
   const subtesList = document.getElementById('subtesList');
+  const subtesPrevBtn = document.getElementById('subtesPrevBtn');
+  const subtesNextBtn = document.getElementById('subtesNextBtn');
+  const subtesPrev10Btn = document.getElementById('subtesPrev10Btn');
+  const subtesNext10Btn = document.getElementById('subtesNext10Btn');
 
   colectivosList?.addEventListener('click', handleLineClick);
   soloColectivosList?.addEventListener('click', handleLineClick);
   searchResults?.addEventListener('click', handleLineClick);
+  subtesList?.addEventListener('click', handleLineClick);
   favoritesSection?.addEventListener('click', handleLineClick);
   historySection?.addEventListener('click', handleLineClick);
   homeHistoryPreview?.addEventListener('click', event => {
@@ -790,19 +719,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   detalleBackBtn?.addEventListener('click', () => {
-    if (currentDetailSource === 'colectivos' || currentDetailSource === 'solo-colectivos') {
-      navigateTo('colectivos');
-    } else if (currentDetailSource === 'subtes') {
-      navigateTo('subtes');
-    } else if (currentDetailSource === 'trenes') {
-      navigateTo('trenes');
-    } else if (currentDetailSource === 'buscar') {
-      navigateTo('buscar');
-    } else if (currentDetailSource === 'favoritos') {
-      navigateTo('favoritos');
-    } else {
-      window.history.back();
-    }
+    window.history.back(); // Volver a la vista anterior preservando su estado
   });
 
   favoritesSection?.addEventListener('click', event => {
@@ -861,6 +778,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  async function openSubtesView() {
+    navigateTo('subtes');
+    if (staticSubteData) {
+      try {
+        const apiResponse = await getSubtesForecastGTFS();
+        subtesData = enrichSubteRealTimeData(apiResponse, staticSubteData);
+        subtesDataArray = subtesData.Entity || subtesData.entity || [];
+        subtesCurrentPage = 1;
+        renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
+      } catch (e) {
+        console.error('Error cargando API de subtes, usando mock:', e);
+        try {
+          const mockResponse = await fetch('./mock/mock_subtes.json').then(r => r.json());
+          subtesData = enrichSubteRealTimeData(mockResponse, staticSubteData);
+          subtesDataArray = subtesData.Entity || subtesData.entity || [];
+          subtesCurrentPage = 1;
+          renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
+        } catch (mockErr) {
+          console.error('Error al cargar datos de subtes (API y mock):', mockErr);
+        }
+      }
+    }
+  }
   homeFavoritesCard?.addEventListener('click', () => navigateTo('favoritos'));
   homeFavoritesCard?.addEventListener('keydown', event => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -886,15 +826,128 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   trenesList?.addEventListener('click', handleLineClick);
 
+<<<<<<< HEAD
+  colectivosPrevBtn?.addEventListener('click', () => {
+    if (colectivosCurrentPage > 1) {
+      colectivosCurrentPage -= 1;
+      renderColectivosLines(colectivosTripData, colectivosCurrentPage);
+    }
+  });
+
+  colectivosNextBtn?.addEventListener('click', () => {
+    const totalPages = Math.max(1, Math.ceil(colectivosTripData.length / COLECTIVOS_PAGE_SIZE));
+    if (colectivosCurrentPage < totalPages) {
+      colectivosCurrentPage += 1;
+      renderColectivosLines(colectivosTripData, colectivosCurrentPage);
+    }
+  });
+
+  colectivosPrev10Btn?.addEventListener('click', () => {
+    if (colectivosCurrentPage > 1) {
+      colectivosCurrentPage = Math.max(1, colectivosCurrentPage - 10);
+      renderColectivosLines(colectivosTripData, colectivosCurrentPage);
+    }
+  });
+
+  colectivosNext10Btn?.addEventListener('click', () => {
+    const totalPages = Math.max(1, Math.ceil(colectivosTripData.length / COLECTIVOS_PAGE_SIZE));
+    if (colectivosCurrentPage < totalPages) {
+      colectivosCurrentPage = Math.min(totalPages, colectivosCurrentPage + 10);
+      renderColectivosLines(colectivosTripData, colectivosCurrentPage);
+    }
+  });
+
+  const soloColectivosBackBtn = document.getElementById('soloColectivosBackBtn');
+  const soloColectivosPrevBtn = document.getElementById('soloColectivosPrevBtn');
+  const soloColectivosNextBtn = document.getElementById('soloColectivosNextBtn');
+  const soloColectivosPrev10Btn = document.getElementById('soloColectivosPrev10Btn');
+  const soloColectivosNext10Btn = document.getElementById('soloColectivosNext10Btn');
+
+  soloColectivosBackBtn?.addEventListener('click', () => {
+    navigateTo('home');
+  });
+
+  soloColectivosPrevBtn?.addEventListener('click', () => {
+    if (soloColectivosCurrentPage > 1) {
+      soloColectivosCurrentPage -= 1;
+      renderSoloColectivosLines(soloColectivosTripData, soloColectivosCurrentPage);
+    }
+  });
+
+  soloColectivosNextBtn?.addEventListener('click', () => {
+    const totalPages = Math.max(1, Math.ceil(soloColectivosTripData.length / SOLO_COLECTIVOS_PAGE_SIZE));
+    if (soloColectivosCurrentPage < totalPages) {
+      soloColectivosCurrentPage += 1;
+      renderSoloColectivosLines(soloColectivosTripData, soloColectivosCurrentPage);
+    }
+  });
+
+  soloColectivosPrev10Btn?.addEventListener('click', () => {
+    if (soloColectivosCurrentPage > 1) {
+      soloColectivosCurrentPage = Math.max(1, soloColectivosCurrentPage - 10);
+      renderSoloColectivosLines(soloColectivosTripData, soloColectivosCurrentPage);
+    }
+  });
+
+  soloColectivosNext10Btn?.addEventListener('click', () => {
+    const totalPages = Math.max(1, Math.ceil(soloColectivosTripData.length / SOLO_COLECTIVOS_PAGE_SIZE));
+    if (soloColectivosCurrentPage < totalPages) {
+      soloColectivosCurrentPage = Math.min(totalPages, soloColectivosCurrentPage + 10);
+      renderSoloColectivosLines(soloColectivosTripData, soloColectivosCurrentPage);
+    }
+  });
+
+  subtesBackBtn?.addEventListener('click', () => {
+    navigateTo('home');
+  });
+
+  subtesPrevBtn?.addEventListener('click', () => {
+    if (subtesCurrentPage > 1) {
+      subtesCurrentPage -= 1;
+      renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
+    }
+  });
+
+  subtesNextBtn?.addEventListener('click', () => {
+    const totalPages = Math.max(1, Math.ceil(subtesDataArray.length / SUBTES_PAGE_SIZE));
+    if (subtesCurrentPage < totalPages) {
+      subtesCurrentPage += 1;
+      renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
+    }
+  });
+
+  subtesPrev10Btn?.addEventListener('click', () => {
+    subtesCurrentPage = Math.max(1, subtesCurrentPage - 10);
+    renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
+  });
+
+  subtesNext10Btn?.addEventListener('click', () => {
+    const totalPages = Math.max(1, Math.ceil(subtesDataArray.length / SUBTES_PAGE_SIZE));
+    subtesCurrentPage = Math.min(totalPages, subtesCurrentPage + 10);
+    renderSubtesLines(subtesDataArray, subtesCurrentPage, staticSubteData);
+  });
+=======
   bindColectivosControls({ navigateTo, renderTransportCard });
   bindSubtesControls({ navigateTo, renderTransportCard });
-
+>>>>>>> upstream/prueba-trenes
 
   renderViewForName(getViewFromHash(), transportData);
   renderHomeHistoryPreview();
 
   searchButton?.addEventListener('click', async () => {
+<<<<<<< HEAD
+    const allData = await ensureTransportData();
+    if (!allData) {
+      renderSearchResults([]);
+      return;
+    }
+
+    buscarCurrentPage = 1;
+    buscarTransportData = allData;
+    renderSearchResults(buscarTransportData, buscarCurrentPage);
+=======
     await runIntegratedSearch(searchInput?.value || '');
+>>>>>>> upstream/prueba-trenes
   });
 
   searchInput?.addEventListener('keydown', async event => {

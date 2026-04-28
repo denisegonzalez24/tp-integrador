@@ -1,0 +1,50 @@
+[
+  {
+    "trip_id": "A01",
+    "stops": [
+      { "stop_id": "1001N", "arrival": "11:00:00" },
+      { "stop_id": "1002N", "arrival": "11:05:00" },
+      { "stop_id": "1003N", "arrival": "11:10:00" }
+    ]
+  },
+  {
+    "trip_id": "B01",
+    "stops": [
+      { "stop_id": "2001N", "arrival": "11:00:00" },
+      { "stop_id": "2002N", "arrival": "11:05:00" },
+      { "stop_id": "2003N", "arrival": "11:10:00" }
+    ]
+  },
+  {
+    "trip_id": "C01",
+    "stops": [
+      { "stop_id": "3001N", "arrival": "11:00:00" },
+      { "stop_id": "3002N", "arrival": "11:05:00" },
+      { "stop_id": "3003N", "arrival": "11:10:00" }
+    ]
+  },
+  {
+    "trip_id": "D01",
+    "stops": [
+      { "stop_id": "4001N", "arrival": "11:00:00" },
+      { "stop_id": "4002N", "arrival": "11:05:00" },
+      { "stop_id": "4003N", "arrival": "11:10:00" }
+    ]
+  },
+  {
+    "trip_id": "E01",
+    "stops": [
+      { "stop_id": "5001N", "arrival": "11:00:00" },
+      { "stop_id": "5002N", "arrival": "11:05:00" },
+      { "stop_id": "5003N", "arrival": "11:10:00" }
+    ]
+  },
+  {
+    "trip_id": "H01",
+    "stops": [
+      { "stop_id": "6001N", "arrival": "11:00:00" },
+      { "stop_id": "6002N", "arrival": "11:05:00" },
+      { "stop_id": "6003N", "arrival": "11:10:00" }
+    ]
+  }
+]

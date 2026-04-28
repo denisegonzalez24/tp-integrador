@@ -1,3 +1,8 @@
+import { getTrainStationsByName, getVehiclePositionsDetailed } from './api.js';
+
+const TRAIN_SEARCH_MIN_CHARS = 3;
+const COLECTIVOS_SEARCH_MIN_CHARS = 0;
+const SUBTES_SEARCH_MIN_CHARS = 1;
 import { getSubtesServiceAlerts, getTrainStationsByName, getVehiclePositionsDetailed } from './api.js';
 
 const TRAIN_SEARCH_MIN_CHARS = 3;

@@ -1,0 +1,28 @@
+{
+  "agencias": [
+    {
+      "agency_id": "149",
+      "agency_name": "NUEVA IDEAL S.A.",
+      "lineas_asociadas": ["620"],
+      "detalles_extra": {
+        "url_oficial": "https://www.argentina.gob.ar/cnrt",
+        "pais": "Argentina",
+        "zona_horaria": "America/Argentina/Buenos_Aires",
+        "idioma": "ES",
+        "descripcion": "Operadora de servicios de transporte automotor en el partido de La Matanza."
+      }
+    },
+    {
+      "agency_id": "60",
+      "agency_name": "TRANSPORTES IDEAL SAN JUSTO S.A.",
+      "lineas_asociadas": ["621"],
+      "detalles_extra": {
+        "url_oficial": "https://www.argentina.gob.ar/cnrt",
+        "pais": "Argentina",
+        "zona_horaria": "America/Argentina/Buenos_Aires",
+        "idioma": "ES",
+        "descripcion": "Empresa responsable de la Red de Colectivos 621 con amplia cobertura en zona oeste."
+      }
+    }
+  ]
+}

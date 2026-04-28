@@ -1,0 +1,8 @@
+{
+  "1-1": [
+    { "stop_name": "Cabecera Inicial", "time": "08:00", "sequence": 1 },
+    { "stop_name": "Av. Juan Manuel de Rosas 1200", "time": "08:15", "sequence": 2 },
+    { "stop_name": "Estación Trasbordo", "time": "08:30", "sequence": 3 },
+    { "stop_name": "Terminal Final", "time": "08:45", "sequence": 4 }
+  ]
+}

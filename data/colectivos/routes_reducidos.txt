@@ -1,0 +1,36 @@
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+"2520","149","620T","JMLMTZ620","Av. Gral. Paz - RN 3",3
+"2521","149","620R1","JMLMTZ620","Ramal 1 - Av. Gral Paz - González Cata Bº Esperanza",3
+"2530","149","620R10","JMLMTZ620","Ramal 10 - Av. Gral Paz - Bº San Pedro",3
+"2531","149","620R11","JMLMTZ620","Ramal 11 - Av. Gral Paz - González Catán x Villa Scasso",3
+"2532","149","620R12","JMLMTZ620","Ramal 12 - Av. Gral Paz - Ramos Mejia - Villa Dorrego",3
+"2533","149","620R13","JMLMTZ620","Ramal 13 - Av. Gral Paz - Ramos Mejia x González Catán",3
+"2534","149","620R14","JMLMTZ620","Ramal 14 - Av. Gral Paz - Ramos Mejia - B. Borgward",3
+"2522","149","620R2","JMLMTZ620","Ramal 2 - Av. Gral Paz - Bº Floresta",3
+"2523","149","620R3","JMLMTZ620","Ramal 3 - Av. Gral Paz - Bº Independencia",3
+"2524","149","620R4","JMLMTZ620","Ramal 4 - Av. Gral Paz - Villa Dorrego",3
+"2525","149","620R5","JMLMTZ620","Ramal 5 - Av. Gral Paz - Villa Scasso x Laferrere",3
+"2526","149","620R6","JMLMTZ620","Ramal 6 - Av. Gral Paz - Bº Los Ceibos",3
+"2527","149","620R7","JMLMTZ620","Ramal 7 - Av. Gral Paz - Bº Los Ceibos x González Catán",3
+"2528","149","620R8","JMLMTZ620","Ramal 8 - Av. Gral Paz - KM 38 x González Catán y Bº Esperanza",3
+"2529","149","620R9","JMLMTZ620","Ramal 9 - Av. Gral Paz - KM 39 x Bº Esperanza",3
+"2535","149","620Ro1","JMLMTZ620","Rondin 1 - González Catán - Los Ceibos x Equiza",3
+"2536","149","620Ro2","JMLMTZ620","Rondin 2 - González Catán - Los Ceibos x Dragones",3
+"2537","149","620Ro3","JMLMTZ620","Rondin 3 - González Catán - Bº San Pedro",3
+"2538","149","620Ro4","JMLMTZ620","Rondin 4 - González Catán - Villa Dorrego",3
+"2715","60","621R9","JMLMTZ621","Bº Esperanza - Mercado Central",3
+"2716","60","621RND10","JMLMTZ621","González Catan - KM.28 Ruta 3",3
+"2718","60","621RND12","JMLMTZ621","Rafael Castillo - Isidro Casanova",3
+"2707","60","621R1","JMLMTZ621","Ramos Mejia - Bº Esperanza",3
+"2714","60","621R8","JMLMTZ621","Ramos Mejia - Cdad. Evitax Htal. Materno Infantil",3
+"2711","60","621R5","JMLMTZ621","Ramos Mejia - La Foresta",3
+"2713","60","621R7","JMLMTZ621","Ramos Mejia - Las Casitas x El Talita",3
+"2708","60","621R2","JMLMTZ621","Ramos Mejia - Villa Scasso",3
+"2712","60","621R6","JMLMTZ621","Ramos Mejia - Villa Scasso - Laferrere",3
+"2717","60","621RND11","JMLMTZ621","Ruta 1001 - Ruta 3 x Villa Scasso",3
+"2701","171","622Ro5","JMLMTZ622","Escuela N° 135 - González Catan",3
+"2702","171","622Ro6","JMLMTZ622","Escuela N° 135 - Ruta 3 KM. 41",3
+"2699","171","622R3","JMLMTZ622","Escuela N° 135 - Villa Insuperable",3
+"2698","171","622R2","JMLMTZ622","Villa Dorrego - Villa Insuperable",3
+"2700","171","622R4","JMLMTZ622","Villa Insuperable - Laferrere",3
+"2703","171","622Ro7","JMLMTZ622","Villa Scasso - Villa Dorrego",3

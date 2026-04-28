@@ -1,0 +1,19 @@
+{
+  "2520": [
+    { "stop_name": "Av. Juan Manuel de Rosas 20500", "time": "00:26:00", "sequence": 1 },
+    { "stop_name": "Av. Juan Manuel de Rosas 18400", "time": "00:28:00", "sequence": 2 },
+    { "stop_name": "Av. Juan Manuel de Rosas 16200", "time": "00:29:08", "sequence": 3 },
+    { "stop_name": "Av. Juan Manuel de Rosas 14100", "time": "00:31:06", "sequence": 4 },
+    { "stop_name": "Av. Juan Manuel de Rosas 12000", "time": "00:33:00", "sequence": 5 }
+  ],
+  "2521": [
+    { "stop_name": "Estación Ramos Mejía", "time": "06:15:00", "sequence": 1 },
+    { "stop_name": "Av. de Mayo y Rivadavia", "time": "06:17:30", "sequence": 2 },
+    { "stop_name": "Hospital Paroissien", "time": "06:20:00", "sequence": 3 }
+  ],
+  "2522": [
+    { "stop_name": "Estación Ramos Mejía", "time": "14:10:00", "sequence": 1 },
+    { "stop_name": "Av. de Mayo 500", "time": "14:12:00", "sequence": 2 },
+    { "stop_name": "Ruta 3 y Camino de Cintura", "time": "14:14:00", "sequence": 3 }
+  ]
+}

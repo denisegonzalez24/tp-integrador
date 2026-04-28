@@ -1,0 +1,31 @@
+{
+  "Header": {
+    "timestamp": 1776607218
+  },
+  "Entity": [
+    {
+      "ID": "LineaA_A13",
+      "Linea": {
+        "Trip_Id": "A13",
+        "Route_Id": "LineaA",
+        "Direction_ID": 1,
+        "start_time": "11:00:00",
+        "start_date": "20260419",
+        "Estaciones": [
+          {
+            "stop_id": "1064N",
+            "stop_name": "Acoyte",
+            "arrival": { "time": 1776607338, "delay": 120 },
+            "departure": { "time": 1776607362, "delay": 144 }
+          },
+          {
+            "stop_id": "1065N",
+            "stop_name": "Río de Janeiro",
+            "arrival": { "time": 1776609558, "delay": 2340 },
+            "departure": { "time": 1776609582, "delay": 2364 }
+          }
+        ]
+      }
+    }
+  ]
+}
