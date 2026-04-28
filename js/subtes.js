@@ -151,7 +151,7 @@ export function handleSubtesListInteraction(event) {
     }
 
     const params = new URLSearchParams({
-        station: stationName,
+        name: stationName,
         linea: lineId || '',
     });
     window.location.href = `./subte-detail.html?${params.toString()}`;

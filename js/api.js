@@ -28,6 +28,29 @@ export async function fetchTransportData(transportType, endpoint, params = {}) {
   return await response.json();
 }
 
+async function fetchTransportDataWithRetry(transportType, endpoint, params = {}, retryOptions = {}) {
+  const {
+    retries = 2,
+    delayMs = 500,
+  } = retryOptions;
+
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await fetchTransportData(transportType, endpoint, params);
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < retries) {
+        await new Promise(resolve => setTimeout(resolve, delayMs * (attempt + 1)));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 export async function getVehiclePositions() {
   return await fetchTransportData('colectivos', 'vehiclePositionsSimple');
 }
@@ -42,7 +65,10 @@ export async function getArribosPorLinea(lineaId) {
 
 // Nueva función para Subtes (Devuelve JSON con próximos arribos)
 export async function getSubtesForecast() {
-  return await fetchTransportData('subtes', 'forecastGTFS');
+  return await fetchTransportDataWithRetry('subtes', 'forecastGTFS', {}, {
+    retries: 2,
+    delayMs: 600,
+  });
 }
 
 export async function getSubtesServiceAlerts(params = {}) {

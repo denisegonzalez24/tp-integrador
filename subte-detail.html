@@ -14,8 +14,11 @@
             <section class="view active">
                 <div class="hero-card">
                     <button id="subteDetailBackBtn" class="link-button" type="button">← Volver</button>
-                    <h2>Detalle de estacion de subte</h2>
-                    <p class="hero-text">Consulta en tiempo real los proximos arribos en la estacion seleccionada.</p>
+                    <h2 id="subteDetailTitle">Proximos subtes</h2>
+                    <p class="hero-text" id="subteDetailStationInfo">Consulta en tiempo real los proximos arribos.</p>
+
+                    <div id="subteDetailFilters" style="margin: 16px 0;"></div>
+
                     <div id="subteDetailState" class="status-list" style="margin-top: 1rem;">
                         <p class="empty">Cargando detalle...</p>
                     </div>
