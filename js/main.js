@@ -14,14 +14,8 @@ import {
   getSoloColectivosCurrentPage,
 } from './colectivos.js';
 import {
-  renderSubtesLines,
   openSubtesView,
-  loadSubtesData,
   bindSubtesControls,
-  handleSubtesListInteraction,
-  getSubtesData,
-  getSubtesCurrentPage,
-  refreshSubtesView,
   loadAndRenderSubtesActivos,
 } from './subtes.js';
 import {
@@ -59,6 +53,7 @@ const validViews = views.map(view => view.id.replace('view-', ''));
 let currentDetailData = null;
 let currentDetailSource = null;
 let detailRefreshInterval = null;
+let viewRefreshInterval = null;
 
 function getViewFromHash() {
   const hash = window.location.hash.slice(1).toLowerCase();
@@ -88,6 +83,41 @@ function stopDetailRefresh() {
     clearInterval(detailRefreshInterval);
     detailRefreshInterval = null;
   }
+}
+
+function stopViewRefresh() {
+  if (viewRefreshInterval) {
+    clearInterval(viewRefreshInterval);
+    viewRefreshInterval = null;
+  }
+}
+
+function startViewRefresh() {
+  stopViewRefresh();
+  viewRefreshInterval = setInterval(async () => {
+    const currentView = getViewFromHash();
+    if (currentView === 'colectivos' || currentView === 'solo-colectivos') {
+      // Pasamos "true" para forzar la descarga de datos nuevos ignorando la caché
+      const freshData = await ensureTransportData(true);
+      if (freshData) {
+        if (currentView === 'colectivos') {
+          renderColectivosLines(freshData, getColectivosCurrentPage(), renderTransportCard);
+        } else {
+          renderSoloColectivosLines(freshData, getSoloColectivosCurrentPage(), renderTransportCard);
+        }
+        
+        const listContainer = document.getElementById(currentView === 'colectivos' ? 'colectivosList' : 'soloColectivosList');
+        if (listContainer) {
+          listContainer.classList.remove('content-refreshed');
+          void listContainer.offsetWidth; // Forzamos un reflow visual para reiniciar la animación
+          listContainer.classList.add('content-refreshed');
+          listContainer.addEventListener('animationend', () => {
+            listContainer.classList.remove('content-refreshed');
+          }, { once: true });
+        }
+      }
+    }
+  }, 30000); // 30000 milisegundos = 30 segundos
 }
 
 function startDetailRefresh() {
@@ -168,8 +198,6 @@ function getActiveListData(listId) {
       return { data: getColectivosTripData(), source: 'colectivos' };
     case 'soloColectivosList':
       return { data: getSoloColectivosTripData(), source: 'solo-colectivos' };
-    case 'subtesList':
-      return { data: getSubtesData(), source: 'subtes' };
     case 'searchResults':
       return { data: getSearchData(), source: 'buscar' };
     default:
@@ -277,8 +305,8 @@ function refreshFavoriteAwareViews() {
     renderSoloColectivosLines(getSoloColectivosTripData(), getSoloColectivosCurrentPage(), renderTransportCard);
   }
 
-  if (currentView === 'subtes' && getSubtesData().length > 0) {
-    refreshSubtesView(renderTransportCard);
+  if (currentView === 'subtes') {
+    loadAndRenderSubtesActivos();
   }
 
   if (currentView === 'buscar' && getSearchData().length > 0) {
@@ -319,12 +347,8 @@ async function renderViewForName(viewName, transportData) {
       break;
     }
     case 'subtes': {
-      if (getSubtesData().length === 0) {
-        const subtesActivosList = document.getElementById('subtesActivosList');
-        if (subtesActivosList) subtesActivosList.innerHTML = '<p class="empty">Buscando formaciones activas...</p>';
-      }
-      const subtesData = await loadSubtesData();
-      renderSubtesLines(subtesData, getSubtesCurrentPage(), renderTransportCard);
+      const subtesActivosList = document.getElementById('subtesActivosList');
+      if (subtesActivosList) subtesActivosList.innerHTML = '<p class="empty">Buscando formaciones activas...</p>';
       loadAndRenderSubtesActivos();
       break;
     }
@@ -365,10 +389,6 @@ function handleLineClick(event) {
   const listId = event.currentTarget.id;
 
   if (listId === 'trenesList' && handleTrenesListInteraction(event)) {
-    return;
-  }
-
-  if (listId === 'subtesList' && handleSubtesListInteraction(event)) {
     return;
   }
 
@@ -419,6 +439,7 @@ function handleLineClick(event) {
   const lineData = dataArray.find(item => String(item._ui_id) === tripId || String(item.id_vehiculo || item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || item.vehicle?.id) === tripId);
 
   if (lineData) {
+    addHistoryItem(lineData, source);
     renderLineDetails(lineData, source);
     navigateTo('detalle');
   } else {
@@ -426,11 +447,13 @@ function handleLineClick(event) {
   }
 }
 
-async function ensureTransportData() {
-  const storedData = loadData(TRANSPORT_DATA_KEY);
-  // Verificamos que los datos cacheados sean del formato nuevo de tu servidor ngrok
-  if (Array.isArray(storedData) && storedData.length > 0 && storedData[0].id_vehiculo) {
-    return storedData;
+async function ensureTransportData(forceRefresh = false) {
+  if (!forceRefresh) {
+    const storedData = loadData(TRANSPORT_DATA_KEY);
+    // Verificamos que los datos cacheados sean del formato nuevo de tu servidor ngrok
+    if (Array.isArray(storedData) && storedData.length > 0 && storedData[0].id_vehiculo) {
+      return storedData;
+    }
   }
 
   try {
@@ -462,6 +485,11 @@ window.addEventListener('hashchange', async () => {
   if (viewName !== 'detalle') {
     stopDetailRefresh();
   }
+  if (viewName === 'colectivos' || viewName === 'solo-colectivos') {
+    startViewRefresh();
+  } else {
+    stopViewRefresh();
+  }
   await renderViewForName(viewName, null);
 });
 
@@ -489,8 +517,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   initHistoryModule({
     loadData,
     saveData,
-    storageKey: HISTORY_STORAGE_KEY,
-    getStationLineFromRamales,
     navigateTo,
     onHistoryChanged: () => {
       renderHomeHistoryPreview();
@@ -513,9 +539,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initSearchModule({
     ensureTransportData,
-    getSubtesData,
-    loadSubtesData,
-    loadTrainStationsCache,
     persistTrainStationsCache,
     getStationLineFromRamales,
     isFavoriteItem,
@@ -611,26 +634,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const entidad = await getSubteRecorrido(subteId);
       const stopUpdates = entidad?.Linea?.Estaciones || entidad?.TripUpdate?.StopTimeUpdate || entidad?.trip_update?.stop_time_update || [];
-      const activeStopIds = stopUpdates.map(stu => stu.stop_id || stu.StopId);
-
-      const catalog = getSubtesData();
-      const lineaData = catalog.find(l => l.id === linea);
-
-      let paradas = [];
-      if (lineaData && lineaData.ramales) {
-        lineaData.ramales.forEach(r => {
-          r.estaciones.forEach(est => {
-            if (activeStopIds.includes(est.id) && !paradas.some(p => p.stop_id === est.id)) {
-              paradas.push({ stop_id: est.id, stop_name: est.nombre });
-            }
-          });
-        });
-      }
-
-      paradas.sort((a, b) => activeStopIds.indexOf(a.stop_id) - activeStopIds.indexOf(b.stop_id));
+      
+      // Simplificamos la obtención de paradas, usando directamente la data de la API en vivo
+      const paradas = stopUpdates.map(stu => ({ stop_id: stu.stop_id || stu.StopId, stop_name: stu.stop_name })).filter(p => p.stop_id && p.stop_name);
 
       const detailData = { isStaticSubte: true, routeId: linea, paradas: paradas, routeInfo: { route_short_name: linea, route_long_name: `Hacia ${destino}`, route_color: color, route_text_color: 'ffffff' }, realTimeSubte: { Entity: [entidad] }, _subteId: subteId };
 
+      addHistoryItem(detailData, 'subtes');
       renderLineDetails(detailData, 'subtes');
       navigateTo('detalle');
     } catch (error) {
