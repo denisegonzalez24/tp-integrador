@@ -58,24 +58,24 @@ function updateSoloColectivosPaginationControls() {
 }
 
 function buildColectivoTransportCard(item, index, source, fallbackIdPrefix, renderTransportCard) {
-    const uniqueId = item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || `${fallbackIdPrefix}-${index}`;
+    const uniqueId = item.id_vehiculo || item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || `${fallbackIdPrefix}-${index}`;
     item._ui_id = uniqueId;
 
-    const directionLabel = item.trip?.direction_id === '1' || item.trip?.direction_id === 1 ? 'vuelta' : 'ida';
-    const serviceLabel = item.trip?.service_id === '2' || item.trip?.service_id === 2
-        ? 'horario fin de semana'
-        : item.trip?.service_id === '1' || item.trip?.service_id === 1
-            ? 'dias habiles'
-            : `servicio ${item.trip?.service_id || 'N/A'}`;
+    const linea = item.linea || item.route_short_name || 'N/A';
+    const destino = item.ramal_destino || item.trip?.trip_headsign || 'Sin destino';
+    const lat = item.latitud ?? item.vehicle?.position?.latitude;
+    const lon = item.longitud ?? item.vehicle?.position?.longitude;
+    const vel = item.velocidad ?? item.vehicle?.position?.speed;
 
     return renderTransportCard({
         item,
         source,
-        title: `Linea ${item.route_short_name || 'N/A'}`,
-        subtitle: `${item.trip?.trip_headsign || 'Sin destino'} - ${directionLabel}`,
-        routeLine: `Viaje ${item.trip?.trip_id || item.id || 'N/A'} - ${serviceLabel}`,
+        title: `Linea ${linea}`,
+        subtitle: destino,
+        routeLine: `Unidad ${item.id_vehiculo || item.trip?.trip_id || 'N/A'}`,
         metaLines: [
-            `Posicion: Lat ${item.vehicle?.position?.latitude?.toFixed(4) || 'N/A'} - Lon ${item.vehicle?.position?.longitude?.toFixed(4) || 'N/A'}`,
+            `Posición: Lat ${lat?.toFixed(4) || 'N/A'} - Lon ${lon?.toFixed(4) || 'N/A'}`,
+            `Velocidad: ${vel ? (vel * 3.6).toFixed(1) + ' km/h' : '0 km/h'}`
         ],
     });
 }

@@ -4,6 +4,9 @@ const CLIENT_ID = "8251a8610a63446c9c090f6d04edc491";
 const CLIENT_SECRET = "b754F8057Ad54DA3a81eD95261d4A7EB";
 const TRENES_API_HOST = "https://ariedro.dev/api-trenes";
 
+// ✅ Tu enlace público de ngrok (Actualízalo aquí cada vez que reinicies)
+export const NGROK_HOST = "https://ad63-2802-8010-653a-d800-464a-ca8-758d-1da.ngrok-free.app";
+
 function buildUrl(transportType, endpoint, params = {}) {
   const host = transportType === 'subtes' ? SUBTES_API_HOST : API_HOST;
   const url = new URL(`${host}/${transportType}/${endpoint}`);
@@ -61,7 +64,8 @@ async function fetchTransportDataWithRetry(transportType, endpoint, params = {},
 }
 
 export async function getVehiclePositions() {
-  return await fetchTransportData('colectivos', 'vehiclePositionsSimple');
+  const data = await fetchMyBackend('colectivos');
+  return data.colectivos || [];
 }
 
 export async function getVehiclePositionsDetailed(params = {}) {
@@ -79,14 +83,21 @@ export async function getColectivosRealTime(routeId, agencyId) {
 
 // Nueva función para Subtes (Devuelve JSON con próximos arribos)
 export async function getSubtesForecast() {
-  return await fetchTransportDataWithRetry('subtes', 'forecastGTFS', {}, {
-    retries: 2,
-    delayMs: 600,
-  });
+  return await fetchMyBackend('subtes/forecast');
+}
+
+// Nueva función para obtener las formaciones activas y resumidas desde tu backend
+export async function getSubtesActivos() {
+  return await fetchMyBackend('subtes');
+}
+
+// Nueva función para obtener el recorrido de un subte activo
+export async function getSubteRecorrido(id) {
+  return await fetchMyBackend(`subtes/recorrido/${id}`);
 }
 
 export async function getSubtesServiceAlerts(params = {}) {
-  return await fetchTransportData('subtes', 'serviceAlerts', params);
+  return await fetchMyBackend('subtes/alertas');
 }
 
 function buildTrenesUrl(path, params = {}) {
@@ -126,49 +137,18 @@ export async function getTrainArrivalsByStation(idEstacion, cantidad = 5, sentid
 
 export async function getTrainRamales() {
   return await fetchTrenesData('infraestructura/ramales', {});
+}
+
+// ✅ Nueva función base para consultar a tu propio servidor
+export async function fetchMyBackend(endpoint) {
+  const response = await fetch(`${NGROK_HOST}/api/${endpoint}`);
+  if (!response.ok) {
+    throw new Error(`Error en mi servidor local: ${response.status}`);
+  }
+  return await response.json();
 }
 
 // Nueva función para Subtes RT: Convierte el feed a JSON manejable
 export async function getSubtesRealTime(params = {}) {
-  // Usamos json=1 para asegurarnos de que la API traduzca el Protocol Buffer a JSON
-  return await fetchTransportData('subtes', 'forecastGTFS', { json: 1, ...params });
-}
-
-function buildTrenesUrl(path, params = {}) {
-  const url = new URL(`${TRENES_API_HOST}/${path}`);
-
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      url.searchParams.set(key, value);
-    }
-  });
-
-  return url.toString();
-}
-
-async function fetchTrenesData(path, params = {}) {
-  const url = buildTrenesUrl(path, params);
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(`Error HTTP ${response.status} - ${response.statusText}`);
-  }
-
-  return await response.json();
-}
-
-export async function getTrainStationsByName(nombre) {
-  return await fetchTrenesData('infraestructura/estaciones', { nombre });
-}
-
-export async function getTrainStationsByRamal(idRamal) {
-  return await fetchTrenesData('infraestructura/estaciones', { idRamal });
-}
-
-export async function getTrainArrivalsByStation(idEstacion, cantidad = 5, sentido = null) {
-  return await fetchTrenesData(`arribos/estacion/${idEstacion}`, { cantidad, sentido });
-}
-
-export async function getTrainRamales() {
-  return await fetchTrenesData('infraestructura/ramales', {});
+  return await fetchMyBackend('subtes/forecast');
 }

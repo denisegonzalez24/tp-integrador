@@ -18,7 +18,8 @@ function getRouteName(data = {}) {
     const vehicle = data?.vehicle || data?.Vehicle || {};
     const trip = tripUpdate.trip || vehicle.trip || data?.trip || {};
 
-    return data?.route_short_name
+    return data?.linea
+        || data?.route_short_name
         || data?.route_id
         || data?.routeId
         || trip?.route_id
@@ -33,7 +34,8 @@ function getTransportHeadsign(data = {}) {
     const vehicle = data?.vehicle || data?.Vehicle || {};
     const trip = tripUpdate.trip || vehicle.trip || data?.trip || {};
 
-    return trip?.trip_headsign
+    return data?.ramal_destino
+        || trip?.trip_headsign
         || trip?.tripHeadsign
         || data?.trip?.trip_headsign
         || data?.route_long_name
@@ -47,8 +49,8 @@ function getVehiclePosition(data = {}) {
     const position = vehicle?.position || vehicle?._position || {};
 
     return {
-        latitude: position?.latitude ?? position?._latitude,
-        longitude: position?.longitude ?? position?._longitude,
+        latitude: data?.latitud ?? position?.latitude ?? position?._latitude,
+        longitude: data?.longitud ?? position?.longitude ?? position?._longitude,
     };
 }
 
@@ -62,8 +64,8 @@ function getHistoryItemId(record) {
     const vehicle = data?.vehicle || data?.Vehicle || {};
     const trip = tripUpdate.trip || vehicle.trip || data?.trip || {};
     const routeName = String(getRouteName(data)).trim().toLowerCase();
-    const tripId = String(trip?.trip_id || trip?.tripId || data?.trip_id || data?.tripId || '').trim().toLowerCase();
-    const vehicleId = String(vehicle?.vehicle?.id || vehicle?._vehicle?.id || vehicle?.id || data?.id || '').trim().toLowerCase();
+    const tripId = String(data?.ramal_id || trip?.trip_id || trip?.tripId || data?.trip_id || data?.tripId || '').trim().toLowerCase();
+    const vehicleId = String(data?.id_vehiculo || vehicle?.vehicle?.id || vehicle?._vehicle?.id || vehicle?.id || data?.id || '').trim().toLowerCase();
 
     return `${record.kind}:${routeName}:${tripId || vehicleId || 'item'}`;
 }

@@ -1,43 +1,8 @@
 
-import { getFavoriteItems, isFavoriteItem } from './storage.js';
-
-export function renderSubtes(routes, containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    if (!routes || routes.length === 0) {
-        container.innerHTML = '<p class="empty">No se encontraron líneas de subtes.</p>';
-        return;
-    }
-
-    container.innerHTML = routes.map(route => {
-        const isFav = isFavoriteItem(route, 'subtes');
-        return `
-            <article class="line-card transport-card color-placeholder" data-trip-id="${route.route_id}" data-route-id="${route.route_id}" data-source="subtes" style="position: relative; border-left: 5px solid #${route.route_color};">
-                <button type="button" class="transport-card-main" data-card-action="line-detail" data-trip-id="${route.route_id}" data-route-id="${route.route_id}" data-type="subte" style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px; cursor: pointer; border: none; background: transparent; font-family: inherit; width: 100%; text-align: left;">
-                    <div class="line-card-main" style="width: 100%;">
-                        <div>
-                            <p class="line-number" style="color: #${route.route_text_color}; background-color: #${route.route_color}; padding: 2px 8px; border-radius: 4px; display: inline-block;">Línea ${route.route_short_name}</p>
-                            <p class="line-subtitle">${route.route_long_name}</p>
-                        </div>
-                    </div>
-                    <p class="line-meta">Frecuencia estimada: ${Math.round(route.headway_secs / 60)} min</p>
-                </button>
-                <div style="padding: 0 16px 16px;">
-                    <button type="button" class="secondary-btn line-action" data-card-action="line-detail" data-trip-id="${route.route_id}" data-route-id="${route.route_id}" data-type="subte">Detalles</button>
-                </div>
-                <button type="button" class="favorite-toggle ${isFav ? 'is-active' : ''}" data-card-action="favorite" data-trip-id="${route.route_id}" aria-pressed="${isFav}" aria-label="${isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}" style="position: absolute; right: 16px; top: 16px;">
-                    ${isFav ? '★' : '☆'}
-                </button>
-            </article>
-        `;
-    }).join('');
-}
+import { getFavoriteItems, isFavoriteItem } from './favoritos.js';
 
 export function getItemTripId(item) {
-  return item?._ui_id || item?.id || item?.trip?.trip_id || item?.trip_id || item?.vehicle?.vehicle?.id || item?.vehicle?.id || '';
+  return item?._ui_id || item?.id_vehiculo || item?.id || item?.trip?.trip_id || item?.trip_id || item?.vehicle?.vehicle?.id || item?.vehicle?.id || '';
 }
 
 export function renderFavoriteToggleButton(item, source) {
@@ -73,10 +38,10 @@ export function renderFavoriteCard(record) {
   const favoriteData = record?.data || {};
   const title = record?.title || 'Favorito';
   const subtitle = record?.subtitle || 'Guardado en favoritos';
-  const routeName = favoriteData?.route_short_name || favoriteData?.route_id || favoriteData?.routeId || favoriteData?.trip?.route_id || favoriteData?.trip?.routeId || favoriteData?.linea?.route_Id || favoriteData?.linea?.route_id || 'Sin línea';
+  const routeName = favoriteData?.linea || favoriteData?.route_short_name || favoriteData?.route_id || favoriteData?.routeId || favoriteData?.trip?.route_id || favoriteData?.trip?.routeId || favoriteData?.linea?.route_Id || favoriteData?.linea?.route_id || 'Sin línea';
   const vehicle = favoriteData?.vehicle || favoriteData?.Vehicle || {};
-  const lat = vehicle.position?.latitude;
-  const lon = vehicle.position?.longitude;
+  const lat = favoriteData?.latitud ?? vehicle.position?.latitude;
+  const lon = favoriteData?.longitud ?? vehicle.position?.longitude;
 
   return `
     <article class="status-item favorite-item" data-favorite-id="${record.favoriteId}">
@@ -117,154 +82,6 @@ export function renderFavoritesView() {
         `}
     </div>
   `;
-}
-
-// En js/ui.js
-export function renderColectivos(routes, containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    container.innerHTML = ''; // Limpiamos
-
-    if (!routes || routes.length === 0) {
-        container.innerHTML = '<p class="empty">No se encontraron rutas de colectivos.</p>';
-        return;
-    }
-
-    container.innerHTML = routes.map(route => {
-        const isFav = isFavoriteItem(route, 'colectivos');
-        return `
-            <article class="line-card transport-card color-placeholder" data-trip-id="${route.route_id}" data-route-id="${route.route_id}" data-source="colectivos" style="position: relative; border-left: 5px solid #${route.route_color || '00b37e'};">
-                <button type="button" class="transport-card-main" data-card-action="line-detail" data-trip-id="${route.route_id}" data-route-id="${route.route_id}" data-type="colectivo" style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px; cursor: pointer; border: none; background: transparent; font-family: inherit; width: 100%; text-align: left;">
-                    <div class="line-card-main" style="width: 100%;">
-                        <div>
-                            <p class="line-number">Línea ${route.route_short_name}</p>
-                            <p class="line-subtitle">${route.route_long_name || 'Ramales varios'}</p>
-                        </div>
-                    </div>
-                </button>
-                <div style="padding: 0 16px 16px;">
-                    <button type="button" class="secondary-btn line-action" data-card-action="line-detail" data-trip-id="${route.route_id}" data-route-id="${route.route_id}" data-type="colectivo">Detalles</button>
-                </div>
-                <button type="button" class="favorite-toggle ${isFav ? 'is-active' : ''}" data-card-action="favorite" data-trip-id="${route.route_id}" aria-pressed="${isFav}" aria-label="${isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}" style="position: absolute; right: 16px; top: 16px;">
-                    ${isFav ? '★' : '☆'}
-                </button>
-            </article>
-        `;
-    }).join('');
-}
-
-export function renderColectivosLines(data, page = 1) {
-  const listContainer = document.getElementById('colectivosList');
-  if (!listContainer) return;
-
-  const startIndex = (page - 1) * COLECTIVOS_PAGE_SIZE;
-  const pageData = data.slice(startIndex, startIndex + COLECTIVOS_PAGE_SIZE);
-
-  listContainer.innerHTML = pageData
-    .map((item, index) => {
-      const uniqueId = item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || `colectivo-${index}`;
-      item._ui_id = uniqueId;
-      const directionLabel = item.trip?.direction_id === '1' || item.trip?.direction_id === 1 ? 'vuelta' : 'ida';
-      const serviceLabel = item.trip?.service_id === '2' || item.trip?.service_id === 2
-        ? 'horario fin de semana'
-        : item.trip?.service_id === '1' || item.trip?.service_id === 1
-          ? 'días hábiles'
-          : `servicio ${item.trip?.service_id || 'N/A'}`;
-
-      const routeId = item.route_id || item.routeId || item.route_short_name || 'N/A';
-      const isFav = isFavoriteItem(item, 'colectivos');
-
-      const estacionesHTML = `
-        <p class="line-route">Viaje ${item.trip?.trip_id || item.id || 'N/A'} • ${serviceLabel}</p>
-        <p class="line-meta">Posición: Lat ${item.vehicle?.position?.latitude?.toFixed(4) || 'N/A'} • Lon ${item.vehicle?.position?.longitude?.toFixed(4) || 'N/A'}</p>
-      `;
-
-      return `
-        <article class="line-card transport-card color-placeholder" data-trip-id="${uniqueId}" data-route-id="${routeId}" data-source="colectivos" style="position: relative;">
-            <button type="button" class="transport-card-main" data-card-action="open" style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px; cursor: pointer; border: none; background: transparent; font-family: inherit; width: 100%; text-align: left;">
-                <div class="line-card-main" style="width: 100%;">
-                    <div>
-                        <p class="line-number">Línea ${item.route_short_name || 'N/A'}</p>
-                        <p class="line-subtitle">${item.trip?.trip_headsign || 'Sin destino'} · ${directionLabel}</p>
-                    </div>
-                </div>
-                <div style="width: 100%; display: flex; flex-direction: column; gap: 4px;">${estacionesHTML}</div>
-            </button>
-            <div style="padding: 0 16px 16px;">
-                <button type="button" class="secondary-btn line-action" data-card-action="line-detail" data-route-id="${routeId}">Detalles</button>
-            </div>
-            <button type="button" class="favorite-toggle ${isFav ? 'is-active' : ''}" data-card-action="favorite" aria-pressed="${isFav}" aria-label="${isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}" style="position: absolute; right: 16px; top: 16px;">
-                ${isFav ? '★' : '☆'}
-            </button>
-        </article>
-      `;
-    })
-    .join('');
-
-  updatePaginationControls('colectivos', page, data.length, COLECTIVOS_PAGE_SIZE);
-}
-
-export function renderSoloColectivosLines(data, page = 1) {
-  const listContainer = document.getElementById('soloColectivosList');
-  if (!listContainer) return;
-
-  const SOLO_COLECTIVOS_PAGE_SIZE = 10;
-  if (!Array.isArray(data) || data.length === 0) {
-    listContainer.innerHTML = '<p class="empty">No se encontraron líneas de colectivos.</p>';
-    updatePaginationControls('soloColectivos', page, 0, SOLO_COLECTIVOS_PAGE_SIZE);
-    return;
-  }
-
-  const startIndex = (page - 1) * SOLO_COLECTIVOS_PAGE_SIZE;
-  const pageData = data.slice(startIndex, startIndex + SOLO_COLECTIVOS_PAGE_SIZE);
-
-  listContainer.innerHTML = pageData
-    .map((item, index) => {
-      const uniqueId = item.id || item.trip?.trip_id || item.trip_id || item.vehicle?.vehicle?.id || `solo-colectivo-${index}`;
-      item._ui_id = uniqueId;
-      const directionLabel = item.trip?.direction_id === '1' || item.trip?.direction_id === 1 ? 'vuelta' : 'ida';
-      const serviceLabel = item.trip?.service_id === '2' || item.trip?.service_id === 2
-        ? 'horario fin de semana'
-        : item.trip?.service_id === '1' || item.trip?.service_id === 1
-          ? 'días hábiles'
-          : `servicio ${item.trip?.service_id || 'N/A'}`;
-
-      const routeId = item.route_id || item.routeId || item.route_short_name || 'N/A';
-      const isFav = isFavoriteItem(item, 'solo-colectivos');
-
-      const estacionesHTML = `
-        <p class="line-route">Viaje ${item.trip?.trip_id || item.id || 'N/A'} • ${serviceLabel}</p>
-        <p class="line-meta">Posición: Lat ${item.vehicle?.position?.latitude?.toFixed(4) || 'N/A'} • Lon ${item.vehicle?.position?.longitude?.toFixed(4) || 'N/A'}</p>
-      `;
-
-      return `
-        <article class="line-card transport-card color-placeholder" data-trip-id="${uniqueId}" data-route-id="${routeId}" data-source="solo-colectivos" style="position: relative;">
-            <button type="button" class="transport-card-main" data-card-action="open" style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px; cursor: pointer; border: none; background: transparent; font-family: inherit; width: 100%; text-align: left;">
-                <div class="line-card-main" style="width: 100%;">
-                    <div>
-                        <p class="line-number">Línea ${item.route_short_name || 'N/A'}</p>
-                        <p class="line-subtitle">${item.trip?.trip_headsign || 'Sin destino'} · ${directionLabel}</p>
-                    </div>
-                </div>
-                <div style="width: 100%; display: flex; flex-direction: column; gap: 4px;">${estacionesHTML}</div>
-            </button>
-            <div style="padding: 0 16px 16px;">
-                <button type="button" class="secondary-btn line-action" data-card-action="line-detail" data-route-id="${routeId}">Detalles</button>
-            </div>
-            <button type="button" class="favorite-toggle ${isFav ? 'is-active' : ''}" data-card-action="favorite" aria-pressed="${isFav}" aria-label="${isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}" style="position: absolute; right: 16px; top: 16px;">
-                ${isFav ? '★' : '☆'}
-            </button>
-        </article>
-      `;
-    })
-    .join('');
-
-  updatePaginationControls('soloColectivos', page, data.length, SOLO_COLECTIVOS_PAGE_SIZE);
-}
-
-export function renderSubtesLines(data, page = 1, staticSubteData = null) {
-  // Removido tras la actualización de alta fidelidad estática
 }
 
 function updatePaginationControls(prefix, currentPage, totalItems, pageSize) {
@@ -419,19 +236,35 @@ export function renderLineDetails(data, source = 'detalle', staticSubteData) {
     
     // Procesamos el JSON mapeando los tiempos por stop_id
     rtEntities.forEach(ent => {
-      const tripUpdate = ent.TripUpdate || ent.trip_update || ent.tripUpdate;
-      if (tripUpdate) {
-        const tRouteId = tripUpdate.Trip?.RouteId || tripUpdate.trip?.route_id || tripUpdate.trip?.routeId || '';
+      if (ent.Linea && ent.Linea.Estaciones) {
+        // Formato específico API Subtes BA
+        const tRouteId = ent.Linea.Route_Id || '';
         if (String(tRouteId).toUpperCase().includes(String(routeId).toUpperCase()) || String(routeId).toUpperCase().includes(String(tRouteId).toUpperCase())) {
-          const stopUpdates = tripUpdate.StopTimeUpdate || tripUpdate.stop_time_update || tripUpdate.stopTimeUpdate || [];
-          stopUpdates.forEach(stu => {
-            const sId = stu.StopId || stu.stop_id || stu.stopId;
-            const arrTime = stu.Arrival?.Time || stu.arrival?.time;
+          ent.Linea.Estaciones.forEach(stu => {
+            const sId = stu.stop_id;
+            const arrTime = stu.arrival?.time;
             if (sId && arrTime) {
               if (!rtByStop[sId]) rtByStop[sId] = [];
               rtByStop[sId].push(arrTime);
             }
           });
+        }
+      } else {
+        // Formato GTFS Realtime tradicional
+        const tripUpdate = ent.TripUpdate || ent.trip_update || ent.tripUpdate;
+        if (tripUpdate) {
+          const tRouteId = tripUpdate.Trip?.RouteId || tripUpdate.trip?.route_id || tripUpdate.trip?.routeId || '';
+          if (String(tRouteId).toUpperCase().includes(String(routeId).toUpperCase()) || String(routeId).toUpperCase().includes(String(tRouteId).toUpperCase())) {
+            const stopUpdates = tripUpdate.StopTimeUpdate || tripUpdate.stop_time_update || tripUpdate.stopTimeUpdate || [];
+            stopUpdates.forEach(stu => {
+              const sId = stu.StopId || stu.stop_id || stu.stopId;
+              const arrTime = stu.Arrival?.Time || stu.arrival?.time;
+              if (sId && arrTime) {
+                if (!rtByStop[sId]) rtByStop[sId] = [];
+                rtByStop[sId].push(arrTime);
+              }
+            });
+          }
         }
       }
     });
@@ -475,21 +308,24 @@ export function renderLineDetails(data, source = 'detalle', staticSubteData) {
   const tripUpdate = data?.trip_update || data?.tripUpdate || {};
   const vehicle = data?.vehicle || data?.Vehicle || {};
   const trip = tripUpdate.trip || vehicle.trip || data?.trip || {};
-  const linea = data?.linea || data?.Linea || {};
+  const lineaData = data?.linea || data?.Linea || {};
 
-  let routeName = data?.route_short_name || data?.route_id || data?.routeId || trip.route_id || trip.routeId || linea.route_Id || linea.route_id;
-  let tripHeadsign = trip.trip_headsign || trip.tripHeadsign || data?.trip?.trip_headsign || 'Sin destino';
+  let routeName = (typeof data?.linea === 'string' ? data.linea : null) || data?.route_short_name || data?.route_id || data?.routeId || trip.route_id || trip.routeId || lineaData.route_Id || lineaData.route_id;
+  let tripHeadsign = data?.ramal_destino || trip.trip_headsign || trip.tripHeadsign || data?.trip?.trip_headsign || 'Sin destino';
   let directionId = trip.direction_id !== undefined ? trip.direction_id : (trip.directionId !== undefined ? trip.directionId : data?.trip?.direction_id);
   let directionLabel = directionId === '1' || directionId === 1 ? 'Vuelta' : 'Ida';
-  let lat = vehicle.position?.latitude;
-  let lon = vehicle.position?.longitude;
-  let speed = vehicle.position?.speed;
-  let tripId = trip.trip_id || trip.tripId || data?.trip_id || data?.tripId || 'N/A';
-  let vehicleId = vehicle.vehicle?.id || vehicle.id || 'N/A';
+  let lat = data?.latitud ?? vehicle.position?.latitude;
+  let lon = data?.longitud ?? vehicle.position?.longitude;
+  let speed = data?.velocidad ?? vehicle.position?.speed;
+  let tripId = data?.ramal_id || trip.trip_id || trip.tripId || data?.trip_id || data?.tripId || 'N/A';
+  let vehicleId = data?.id_vehiculo || vehicle.vehicle?.id || vehicle.id || 'N/A';
 
   if (tripUpdate.trip || vehicle.trip) {
     tripHeadsign = tripHeadsign === 'Sin destino' ? 'Subte' : tripHeadsign;
     if (directionId === undefined) directionLabel = '';
+  }
+  if (!tripUpdate.trip && !vehicle.trip && !data?.trip) {
+    directionLabel = ''; // Colectivos desde ngrok no traen dirección por defecto
   }
 
   routeName = routeName || 'Sin línea';
@@ -503,20 +339,38 @@ export function renderLineDetails(data, source = 'detalle', staticSubteData) {
   if (detalleTitle) detalleTitle.textContent = `Línea ${displayRoute === 'Sin línea' ? 'Sin línea' : displayRoute}`;
   if (detalleSubtitle) detalleSubtitle.textContent = `${tripHeadsign}${directionLabel ? ` · ${directionLabel}` : ''}`;
 
+  let mapHTML = '';
+  if (lat !== undefined && lon !== undefined && lat !== 0 && lon !== 0) {
+    mapHTML = `
+      <div style="width: 100%; border-radius: 12px; overflow: hidden; margin-top: 8px; border: 1px solid var(--border);">
+        <iframe 
+          width="100%" 
+          height="200" 
+          frameborder="0" 
+          scrolling="no" 
+          marginheight="0" 
+          marginwidth="0" 
+          src="https://maps.google.com/maps?q=${lat},${lon}&hl=es&z=16&output=embed">
+        </iframe>
+      </div>
+    `;
+  }
+
   container.innerHTML = `
     <div class="detail-actions">
       <button type="button" class="secondary-btn ${favoriteActive ? 'favorite-active' : ''}" data-card-action="favorite-detail" aria-pressed="${favoriteActive}">${favoriteActive ? 'Quitar de favoritos' : 'Guardar en favoritos'}</button>
     </div>
-    <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+    <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px; width: 100%;">
       <p class="status-title">Información del Vehículo</p>
       <p class="line-meta"><strong>ID Vehículo:</strong> ${vehicleId}</p>
       <p class="line-meta"><strong>ID Viaje:</strong> ${tripId}</p>
       <p class="line-meta"><strong>Velocidad:</strong> ${speed !== undefined ? (speed * 3.6).toFixed(1) + ' km/h' : 'N/A'}</p>
     </article>
-    <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+    <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px; width: 100%;">
       <p class="status-title">Ubicación Actual</p>
       <p class="line-meta"><strong>Latitud:</strong> ${lat !== undefined ? lat.toFixed(5) : 'N/A'}</p>
       <p class="line-meta"><strong>Longitud:</strong> ${lon !== undefined ? lon.toFixed(5) : 'N/A'}</p>
+      ${mapHTML}
     </article>
   `;
 }

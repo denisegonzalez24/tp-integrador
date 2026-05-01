@@ -19,9 +19,9 @@ function getFavoriteItemId(data, source) {
     const tripUpdate = data?.trip_update || data?.tripUpdate || {};
     const vehicle = data?.vehicle || data?.Vehicle || {};
     const trip = tripUpdate.trip || vehicle.trip || data?.trip || {};
-    const routeName = String(data?.route_short_name || data?.route_id || data?.routeId || trip.route_id || trip.routeId || data?.linea?.route_Id || data?.linea?.route_id || 'sin-linea').trim().toLowerCase();
-    const tripId = String(trip.trip_id || trip.tripId || data?.trip_id || data?.tripId || data?.id || '').trim().toLowerCase();
-    const vehicleId = String(vehicle.vehicle?.id || vehicle.id || '').trim().toLowerCase();
+    const routeName = String(data?.linea || data?.route_short_name || data?.route_id || data?.routeId || trip.route_id || trip.routeId || data?.linea?.route_Id || data?.linea?.route_id || 'sin-linea').trim().toLowerCase();
+    const tripId = String(data?.ramal_id || trip.trip_id || trip.tripId || data?.trip_id || data?.tripId || data?.id || '').trim().toLowerCase();
+    const vehicleId = String(data?.id_vehiculo || vehicle.vehicle?.id || vehicle.id || '').trim().toLowerCase();
 
     return `${source}:${routeName}:${tripId || vehicleId || 'item'}`;
 }
@@ -46,9 +46,9 @@ function buildFavoriteRecord(data, source) {
     const tripUpdate = data?.trip_update || data?.tripUpdate || {};
     const tripVehicle = data?.vehicle || data?.Vehicle || {};
     const trip = tripUpdate.trip || tripVehicle.trip || data?.trip || {};
-    const routeShortName = data?.route_short_name || data?.route_id || data?.routeId || trip.route_id || trip.routeId || data?.linea?.route_Id || data?.linea?.route_id || 'Sin linea';
+    const routeShortName = data?.linea || data?.route_short_name || data?.route_id || data?.routeId || trip.route_id || trip.routeId || data?.linea?.route_Id || data?.linea?.route_id || 'Sin linea';
     const routeLongName = data?.route_long_name || trip.route_long_name || trip.routeLongName || '';
-    const headsign = trip.trip_headsign || trip.tripHeadsign || data?.trip?.trip_headsign || 'Sin destino';
+    const headsign = data?.ramal_destino || trip.trip_headsign || trip.tripHeadsign || data?.trip?.trip_headsign || 'Sin destino';
     const favoriteId = getFavoriteItemId(data, source);
 
     return {
@@ -103,10 +103,10 @@ function renderFavoriteCard(record) {
     `;
     }
 
-    const routeName = favoriteData?.route_short_name || favoriteData?.route_id || favoriteData?.routeId || favoriteData?.trip?.route_id || favoriteData?.trip?.routeId || favoriteData?.linea?.route_Id || favoriteData?.linea?.route_id || 'Sin linea';
+    const routeName = favoriteData?.linea || favoriteData?.route_short_name || favoriteData?.route_id || favoriteData?.routeId || favoriteData?.trip?.route_id || favoriteData?.trip?.routeId || favoriteData?.linea?.route_Id || favoriteData?.linea?.route_id || 'Sin linea';
     const vehicle = favoriteData?.vehicle || favoriteData?.Vehicle || {};
-    const lat = vehicle.position?.latitude;
-    const lon = vehicle.position?.longitude;
+    const lat = favoriteData?.latitud ?? vehicle.position?.latitude;
+    const lon = favoriteData?.longitud ?? vehicle.position?.longitude;
 
     return `
     <article class="status-item favorite-item" data-favorite-id="${record.favoriteId}">
