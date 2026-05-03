@@ -97,7 +97,21 @@ export async function getSubteRecorrido(id) {
 }
 
 export async function getSubtesServiceAlerts(params = {}) {
-  return await fetchMyBackend('subtes/alertas');
+  try {
+    return await fetchMyBackend('subtes/alertas');
+  } catch (error) {
+    console.warn('Fallo el proxy de alertas de subtes. Probando endpoint oficial una vez:', error);
+    return await fetchTransportData('subtes', 'serviceAlerts', { json: 1, ...params });
+  }
+}
+
+export async function getColectivosServiceAlerts(params = {}) {
+  try {
+    return await fetchMyBackend('colectivos/alertas');
+  } catch (error) {
+    console.warn('Fallo el proxy de alertas de colectivos. Probando endpoint oficial una vez:', error);
+    return await fetchTransportData('colectivos', 'serviceAlerts', { json: 1, ...params });
+  }
 }
 
 function buildTrenesUrl(path, params = {}) {
@@ -140,6 +154,10 @@ export async function getTrainRamales() {
 }
 
 // ✅ Nueva función base para consultar a tu propio servidor
+export async function getTrainGerencias() {
+  return await fetchTrenesData('infraestructura/gerencias', {});
+}
+
 export async function fetchMyBackend(endpoint) {
   const response = await fetch(`${NGROK_HOST}/api/${endpoint}`);
   if (!response.ok) {

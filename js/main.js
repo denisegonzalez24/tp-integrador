@@ -1,6 +1,7 @@
 ﻿﻿import { getVehiclePositions, getSubteRecorrido } from './api.js';
 import { saveData, loadData } from './storage.js';
-import { openTrenesView, handleTrenesListInteraction, getStationLineFromRamales } from './trenes.js';
+import { getSubtesServiceAlerts, getColectivosServiceAlerts, getTrainGerencias } from './api.js';
+import { initTrenesModule, openTrenesView, handleTrenesListInteraction, getStationLineFromRamales } from './trenes.js';
 import { renderLineDetails as renderLineDetailsUI } from './ui.js';
 import {
   renderColectivosLines,
@@ -54,6 +55,210 @@ let currentDetailData = null;
 let currentDetailSource = null;
 let detailRefreshInterval = null;
 let viewRefreshInterval = null;
+
+function escapeHTML(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function normalizeAlertEntities(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.entity)) return payload.entity;
+  if (Array.isArray(payload?.Entity)) return payload.Entity;
+  if (Array.isArray(payload?._entity)) return payload._entity;
+  return [];
+}
+
+function getAlertTranslationText(field) {
+  const translations = field?.translation || field?._translation || [];
+  const firstTranslation = Array.isArray(translations) ? translations[0] : null;
+  return firstTranslation?.text || firstTranslation?._text || '';
+}
+
+function getAlertRouteLabel(entity) {
+  const alert = entity?.alert || entity?.Alert || entity?._alert || {};
+  const informedEntities = alert.informed_entity || alert._informed_entity || [];
+  const routes = Array.from(new Set(
+    (Array.isArray(informedEntities) ? informedEntities : [])
+      .map(item => item?.route_id || item?._route_id)
+      .filter(Boolean)
+      .map(route => String(route).replace(/^Linea/i, 'Linea ')),
+  ));
+
+  return routes.slice(0, 3).join(' / ');
+}
+
+function normalizeServiceAlerts(payload) {
+  return normalizeAlertEntities(payload)
+    .map(entity => {
+      const alert = entity?.alert || entity?.Alert || entity?._alert || {};
+      const title = getAlertTranslationText(alert.header_text || alert._header_text);
+      const description = getAlertTranslationText(alert.description_text || alert._description_text);
+
+      return {
+        id: entity?.id || entity?._id || title || description,
+        title: title || description || 'Alerta de servicio',
+        description,
+        routeLabel: getAlertRouteLabel(entity),
+      };
+    })
+    .filter(alert => alert.title || alert.description);
+}
+
+function normalizeTrainServiceAlerts(payload) {
+  const gerencias = Array.isArray(payload) ? payload : [];
+
+  return gerencias.flatMap(gerencia => {
+    const lineName = gerencia?.nombre || 'Linea de tren';
+    const alerts = Array.isArray(gerencia?.alerta) ? gerencia.alerta : [];
+
+    return alerts
+      .map((alert, index) => {
+        const title = alert?.titulo || alert?.nombre || alert?.header || `Linea ${lineName}`;
+        const description = alert?.contenido || alert?.mensaje || alert?.descripcion || alert?.description || '';
+
+        return {
+          id: alert?.id || `${gerencia?.id || lineName}-${index}`,
+          title,
+          description,
+          routeLabel: lineName,
+        };
+      })
+      .filter(alert => alert.title || alert.description);
+  });
+}
+
+async function withOneRetry(task, retryDelayMs = 600) {
+  try {
+    return await task();
+  } catch (firstError) {
+    await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+
+    try {
+      return await task();
+    } catch (secondError) {
+      console.warn('La consulta de alertas fallo tambien en el retry:', secondError);
+      throw secondError;
+    }
+  }
+}
+
+function renderServiceStatusItem({ title, alerts = [], loading = false, pending = false, error = false }) {
+  const safeTitle = escapeHTML(title);
+
+  if (loading) {
+    return `
+      <article class="status-item service-status-item">
+        <div>
+          <p class="status-title">${safeTitle}</p>
+          <p class="line-meta">Consultando alertas...</p>
+        </div>
+        <span class="status-chip status-neutral">Cargando</span>
+      </article>
+    `;
+  }
+
+  if (pending) {
+    return `
+      <article class="status-item service-status-item">
+        <div>
+          <p class="status-title">${safeTitle}</p>
+          <p class="line-meta">Alertas pendientes de integrar.</p>
+        </div>
+        <span class="status-chip status-neutral">Pendiente</span>
+      </article>
+    `;
+  }
+
+  if (error) {
+    return `
+      <article class="status-item service-status-item">
+        <div>
+          <p class="status-title">${safeTitle}</p>
+          <p class="line-meta">No se pudieron cargar las alertas.</p>
+        </div>
+        <span class="status-chip status-warning">Sin datos</span>
+      </article>
+    `;
+  }
+
+  if (!alerts.length) {
+    return `
+      <article class="status-item service-status-item">
+        <div>
+          <p class="status-title">${safeTitle}</p>
+          <p class="line-meta">Sin alertas reportadas.</p>
+        </div>
+        <span class="status-chip status-ok">Normal</span>
+      </article>
+    `;
+  }
+
+  const visibleAlerts = alerts.slice(0, 3);
+  const extraCount = Math.max(0, alerts.length - visibleAlerts.length);
+
+  return `
+    <details class="status-item service-status-item service-status-item-alert">
+      <summary class="service-status-summary">
+        <div class="service-status-heading">
+          <p class="status-title">${safeTitle}</p>
+          <span class="status-chip status-warning">${alerts.length} alerta${alerts.length === 1 ? '' : 's'}</span>
+        </div>
+      </summary>
+      <div class="service-status-content">
+        <div class="service-alert-list">
+          ${visibleAlerts.map(alert => `
+            <div class="service-alert-text">
+              <p class="line-subtitle">${escapeHTML(alert.title)}</p>
+            </div>
+          `).join('')}
+          ${extraCount > 0 ? `<p class="line-meta">+${extraCount} alerta${extraCount === 1 ? '' : 's'} mas.</p>` : ''}
+        </div>
+      </div>
+    </details>
+  `;
+}
+
+function renderServiceStatusPanel(state = {}) {
+  const serviceStatusList = document.getElementById('serviceStatusList');
+  if (!serviceStatusList) return;
+
+  serviceStatusList.innerHTML = [
+    renderServiceStatusItem({ title: 'Colectivos', ...(state.colectivos || {}) }),
+    renderServiceStatusItem({ title: 'Trenes', ...(state.trenes || {}) }),
+    renderServiceStatusItem({ title: 'Subtes', ...(state.subtes || {}) }),
+  ].join('');
+}
+
+async function loadAndRenderServiceAlerts() {
+  renderServiceStatusPanel({
+    colectivos: { loading: true },
+    trenes: { loading: true },
+    subtes: { loading: true },
+  });
+
+  const [colectivosResult, trenesResult, subtesResult] = await Promise.allSettled([
+    getColectivosServiceAlerts(),
+    withOneRetry(getTrainGerencias),
+    withOneRetry(getSubtesServiceAlerts),
+  ]);
+
+  renderServiceStatusPanel({
+    colectivos: colectivosResult.status === 'fulfilled'
+      ? { alerts: normalizeServiceAlerts(colectivosResult.value) }
+      : { error: true },
+    trenes: trenesResult.status === 'fulfilled'
+      ? { alerts: normalizeTrainServiceAlerts(trenesResult.value) }
+      : { error: true },
+    subtes: subtesResult.status === 'fulfilled'
+      ? { alerts: normalizeServiceAlerts(subtesResult.value) }
+      : { error: true },
+  });
+}
 
 function getViewFromHash() {
   const hash = window.location.hash.slice(1).toLowerCase();
@@ -328,6 +533,9 @@ function refreshFavoriteAwareViews() {
 
 async function renderViewForName(viewName, transportData) {
   switch (viewName) {
+    case 'home':
+      loadAndRenderServiceAlerts();
+      break;
     case 'colectivos': {
       if (!transportData && getColectivosTripData().length === 0) {
         const list = document.getElementById('colectivosList');
@@ -352,6 +560,9 @@ async function renderViewForName(viewName, transportData) {
       loadAndRenderSubtesActivos();
       break;
     }
+    case 'trenes':
+      await openTrenesView(navigateTo);
+      break;
     case 'buscar':
       if (getSearchData().length > 0) {
         renderSearchResults(getSearchData(), getSearchCurrentPage());
@@ -534,6 +745,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       addHistoryItem(data, source);
       renderLineDetails(data, source);
       navigateTo('detalle');
+    },
+  });
+
+  initTrenesModule({
+    openStationDetail: (stationId, stationData = null) => {
+      if (stationData) {
+        addHistoryItem(stationData, 'trenes', { kind: 'train-station' });
+      }
+      window.location.href = `./detail.html?id=${encodeURIComponent(stationId)}`;
     },
   });
 

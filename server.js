@@ -154,7 +154,7 @@ app.get('/api/subtes/forecast', async (req, res) => {
 app.get('/api/subtes/alertas', async (req, res) => {
     const CLIENT_ID = '8251a8610a63446c9c090f6d04edc491';
     const CLIENT_SECRET = 'b754F8057Ad54DA3a81eD95261d4A7EB';
-    const API_URL = `https://apitransporte.buenosaires.gob.ar/subtes/serviceAlerts?client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}`;
+    const API_URL = `https://apitransporte.buenosaires.gob.ar/subtes/serviceAlerts?client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&json=1`;
 
     try {
         const response = await fetch(API_URL);
@@ -162,6 +162,27 @@ app.get('/api/subtes/alertas', async (req, res) => {
         res.json(data);
     } catch (error) {
         res.status(500).json({ error: 'No se pudieron obtener las alertas' });
+    }
+});
+
+// Proxy para las alertas de colectivos
+app.get('/api/colectivos/alertas', async (req, res) => {
+    const CLIENT_ID = '8251a8610a63446c9c090f6d04edc491';
+    const CLIENT_SECRET = 'b754F8057Ad54DA3a81eD95261d4A7EB';
+    const API_URL = `https://apitransporte.buenosaires.gob.ar/colectivos/serviceAlerts?client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&json=1`;
+
+    try {
+        const response = await fetch(API_URL);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`La API de colectivos respondio con error ${response.status}: ${errorText}`);
+        }
+
+        const data = await response.json();
+        res.json(data);
+    } catch (error) {
+        console.error('Error al obtener alertas de colectivos:', error.message);
+        res.status(500).json({ error: 'No se pudieron obtener las alertas de colectivos' });
     }
 });
 
