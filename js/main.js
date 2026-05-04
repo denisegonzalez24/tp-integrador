@@ -61,6 +61,7 @@ const ROUTE_BY_VIEW = {
   historial: './historial.html',
   contacto: './contacto.html',
 };
+const DETAIL_STORAGE_KEY = 'currentTransportDetail';
 const views = Array.from(document.querySelectorAll('.view'));
 const navLinks = Array.from(document.querySelectorAll('.bottom-nav .nav-link'));
 const validViews = views.map(view => view.id.replace('view-', ''));
@@ -76,6 +77,65 @@ function escapeHTML(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function saveCurrentDetailState(data, source) {
+  try {
+    // Intentamos serializar de forma segura el objeto de detalle.
+    const payload = { data, source };
+    try {
+      sessionStorage.setItem(DETAIL_STORAGE_KEY, JSON.stringify(payload));
+      return;
+    } catch (err) {
+      // Si falla (por ejemplo objetos circulares), construimos una versión saneada.
+    }
+
+    const sanitize = (obj) => {
+      if (!obj || typeof obj !== 'object') return obj;
+      const allowedKeys = [
+        '_ui_id', 'id_vehiculo', 'id', 'trip', 'vehicle', 'trip_update', 'Linea', 'linea', 'route_short_name', 'route_id', 'route_long_name',
+        'latitud', 'longitud', 'velocidad', 'isStaticColectivo', 'isStaticSubte', 'paradas', 'routeInfo', 'realTimeSubte', 'realTimeActive', '_subteId'
+      ];
+      const out = {};
+      for (const k of allowedKeys) {
+        if (k in obj) {
+          try {
+            out[k] = obj[k];
+          } catch (e) {
+            // ignore non-serializable
+          }
+        }
+      }
+      // También intentamos incluir propiedades útiles anidadas si existen
+      if (!out.trip && obj.trip) out.trip = obj.trip;
+      if (!out.vehicle && obj.vehicle) out.vehicle = obj.vehicle;
+      if (!out.trip_update && obj.trip_update) out.trip_update = obj.trip_update;
+      return out;
+    };
+
+    const safePayload = { data: sanitize(data), source };
+    sessionStorage.setItem(DETAIL_STORAGE_KEY, JSON.stringify(safePayload));
+  } catch {
+    // Ignore storage errors and keep the in-memory state only.
+  }
+}
+
+function loadCurrentDetailState() {
+  try {
+    const raw = sessionStorage.getItem(DETAIL_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || !parsed.data) {
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
 }
 
 function normalizeAlertEntities(payload) {
@@ -622,6 +682,13 @@ async function renderViewForName(viewName, transportData) {
     case 'contacto':
       break;
     case 'detalle':
+      if (!currentDetailData) {
+        const savedDetail = loadCurrentDetailState();
+        if (savedDetail?.data) {
+          currentDetailData = savedDetail.data;
+          currentDetailSource = savedDetail.source || 'detalle';
+        }
+      }
       if (currentDetailData) {
         renderLineDetails(currentDetailData, currentDetailSource || 'detalle');
       }
@@ -639,6 +706,7 @@ function handleNavClick(event) {
 function renderLineDetails(data, source = 'detalle') {
   currentDetailData = data;
   currentDetailSource = source;
+  saveCurrentDetailState(data, source);
   renderLineDetailsUI(data, source);
   startDetailRefresh();
 }
@@ -767,6 +835,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     },
     openTransportDetail: (data, source = 'detalle') => {
       addHistoryItem(data, source);
+      // Guardamos explícitamente un estado serializable antes de navegar entre páginas
+      saveCurrentDetailState(data, source);
       renderLineDetails(data, source);
       navigateTo('detalle');
     },
@@ -790,6 +860,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     },
     openTransportDetail: (data, source = 'detalle') => {
       addHistoryItem(data, source);
+      saveCurrentDetailState(data, source);
       renderLineDetails(data, source);
       navigateTo('detalle');
     },
@@ -818,6 +889,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     },
     openTransportDetail: (data, source = 'detalle') => {
       addHistoryItem(data, source);
+      saveCurrentDetailState(data, source);
       renderLineDetails(data, source);
       navigateTo('detalle');
     },
