@@ -112,6 +112,18 @@ a {
   margin-bottom: 20px;
 }
 
+.hero-icon.hero-icon-app {
+  background: transparent;
+  padding: 0;
+}
+
+.hero-icon.hero-icon-app img {
+  display: block;
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+}
+
 .hero-icon svg {
   width: 28px;
   height: 28px;
