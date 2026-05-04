@@ -509,11 +509,11 @@ h1 {
   min-height: 38px;
   margin: 4px 0 14px;
   padding: 8px 14px;
-  border: 1px solid rgba(0, 179, 126, 0.26);
-  border-radius: 14px;
-  background: rgba(0, 179, 126, 0.1);
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
   color: var(--accent-dark);
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -529,8 +529,8 @@ h1 {
 
 .back-button:hover,
 .back-button:focus-visible {
-  border-color: rgba(0, 179, 126, 0.4);
-  background: rgba(0, 179, 126, 0.16);
+  border-color: transparent;
+  background: transparent;
   outline: none;
 }
 
@@ -539,6 +539,27 @@ h1 {
   background: #f1f3f5;
   padding: 18px 18px 16px;
   margin-bottom: 0;
+}
+
+.transport-card[data-source="colectivos"],
+.transport-card[data-source="solo-colectivos"] {
+  border: 1px solid transparent;
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(246, 251, 255, 0.98) 0%, rgba(255, 255, 255, 0.99) 100%);
+  box-shadow: 0 12px 24px rgba(14, 46, 86, 0.08);
+}
+
+.transport-card[data-source="colectivos"] .favorite-toggle,
+.transport-card[data-source="solo-colectivos"] .favorite-toggle {
+  border-color: transparent;
+  background: rgba(0, 179, 126, 0.08);
+}
+
+.transport-card[data-source="colectivos"] .favorite-toggle:hover,
+.transport-card[data-source="colectivos"] .favorite-toggle:focus-visible,
+.transport-card[data-source="solo-colectivos"] .favorite-toggle:hover,
+.transport-card[data-source="solo-colectivos"] .favorite-toggle:focus-visible {
+  border-color: transparent;
 }
 
 .station-card {
@@ -561,6 +582,54 @@ h1 {
 .train-search-actions .secondary-btn {
   padding: 8px 12px;
   border-radius: 12px;
+}
+
+.subte-active-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 2rem;
+}
+
+.subte-active-card {
+  width: 100%;
+  border: 1px solid rgba(0, 179, 126, 0.18);
+  border-left: 4px solid var(--subte-line-color, var(--border));
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(246, 251, 255, 0.98) 0%, rgba(255, 255, 255, 0.99) 100%);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 10px 22px rgba(14, 46, 86, 0.08);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.subte-active-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0, 179, 126, 0.3);
+  box-shadow: 0 14px 26px rgba(14, 46, 86, 0.1);
+  background: rgba(0, 179, 126, 0.05);
+}
+
+.subte-active-card-main {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+
+.subte-active-card .status-title {
+  line-height: 1.25;
+}
+
+.subte-active-chip {
+  align-self: flex-end;
+  background: var(--subte-line-color, rgba(91, 103, 120, 0.12));
+  color: white;
+  border: none;
 }
 
 .transport-card {
@@ -960,14 +1029,16 @@ h1 {
   list-style: none;
   margin-bottom: 12px;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 22px;
   overflow: hidden;
-  background: var(--surface);
-  transition: all 0.3s ease;
+  background: #f6fbff;
+  box-shadow: 0 10px 24px rgba(14, 46, 86, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .trenes-line-details[open] {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 179, 126, 0.2);
+  box-shadow: 0 16px 30px rgba(14, 46, 86, 0.12);
 }
 
 .trenes-line-summary {
@@ -982,7 +1053,7 @@ h1 {
 }
 
 .trenes-line-summary:hover {
-  background: var(--surface-soft);
+  background: rgba(0, 179, 126, 0.05);
 }
 
 .trenes-line-summary::marker {
@@ -990,7 +1061,7 @@ h1 {
 }
 
 .trenes-line-details[open] .trenes-line-summary {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(216, 233, 245, 0.95);
 }
 
 .trenes-line-header {
@@ -1003,7 +1074,7 @@ h1 {
 
 .trenes-line-name {
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: 800;
   color: var(--text);
   margin: 0;
 }
@@ -1016,15 +1087,15 @@ h1 {
 
 .train-alert-icon {
   color: #d93025;
-  font-size: 1rem;
+  font-size: 1.05rem;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 /* Trenes Ramales Styles */
 .trenes-ramales-container {
   padding: 12px 18px 16px;
-  background: var(--surface-soft);
+  background: rgba(255, 255, 255, 0.65);
   display: grid;
   gap: 10px;
 }
@@ -1032,19 +1103,21 @@ h1 {
 .trenes-ramal-details {
   list-style: none;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 18px;
   overflow: hidden;
   background: var(--surface);
-  transition: all 0.2s ease;
+  box-shadow: 0 8px 18px rgba(14, 46, 86, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .trenes-ramal-details[open] {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 179, 126, 0.18);
+  box-shadow: 0 14px 26px rgba(14, 46, 86, 0.1);
 }
 
 .trenes-ramal-summary {
   cursor: pointer;
-  padding: 12px 14px;
+  padding: 14px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1054,7 +1127,7 @@ h1 {
 }
 
 .trenes-ramal-summary:hover {
-  background: var(--surface-soft);
+  background: rgba(0, 179, 126, 0.05);
 }
 
 .trenes-ramal-summary::marker {
@@ -1062,12 +1135,12 @@ h1 {
 }
 
 .trenes-ramal-details[open] .trenes-ramal-summary {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(216, 233, 245, 0.95);
 }
 
 .ramal-nombre {
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 800;
   color: var(--text);
   margin: 0;
   flex: 1;
@@ -1079,8 +1152,8 @@ h1 {
 }
 
 .ramal-estaciones {
-  padding: 12px 14px;
-  background: var(--surface-soft);
+  padding: 12px 16px 16px;
+  background: linear-gradient(180deg, rgba(246, 251, 255, 0.92) 0%, rgba(255, 255, 255, 0.98) 100%);
 }
 
 .estaciones-title {
@@ -1109,30 +1182,57 @@ h1 {
 .train-station-card {
   width: 100%;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  background: #fff;
-  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 12px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   cursor: pointer;
   text-align: left;
+  box-shadow: 0 6px 16px rgba(14, 46, 86, 0.05);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
 .train-station-card:hover {
-  background: var(--surface-soft);
+  background: rgba(0, 179, 126, 0.06);
+  border-color: rgba(0, 179, 126, 0.24);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(14, 46, 86, 0.08);
 }
 
 .train-station-name {
   color: var(--text);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .train-station-action {
   color: var(--accent-dark);
   font-size: 0.85rem;
   white-space: nowrap;
+}
+
+@media (max-width: 430px) {
+  .trenes-line-summary,
+  .trenes-ramal-summary,
+  .ramal-estaciones {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .trenes-ramales-container {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .train-station-card {
+    padding: 11px 12px;
+  }
+
+  .subte-active-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 .metadata-item {

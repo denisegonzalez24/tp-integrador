@@ -5,6 +5,35 @@ function getLineaColor(linea) {
     return colors[linea?.toUpperCase()] || '999999';
 }
 
+function normalizeSubteLineLabel(value = '') {
+    const cleanValue = String(value || '')
+        .replace(/linea/ig, '')
+        .replace(/_/g, ' ')
+        .trim();
+    const match = cleanValue.match(/[A-H]/i);
+    return match ? match[0].toUpperCase() : cleanValue.toUpperCase();
+}
+
+function formatSubteDestination(value = '') {
+    const words = String(value || '')
+        .trim()
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(Boolean);
+
+    const lowerWords = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'a', 'al']);
+
+    return words
+        .map((word, index) => {
+            if (index > 0 && lowerWords.has(word)) {
+                return word;
+            }
+
+            return word.charAt(0).toUpperCase() + word.slice(1);
+        })
+        .join(' ');
+}
+
 export async function loadAndRenderSubtesActivos() {
     const container = document.getElementById('subtesActivosList');
     if (!container) return;
@@ -22,16 +51,16 @@ export async function loadAndRenderSubtesActivos() {
             const color = getLineaColor(subte.linea);
             const estado = subte.detenidoEn ? `Detenido en ${subte.detenidoEn}` : `Próx. parada: ${subte.proximaParada}`;
             const tiempoText = subte.tiempoLlegada === 0 ? 'Llegando' : `En ${subte.tiempoLlegada} min`;
+            const lineLabel = normalizeSubteLineLabel(subte.linea);
+            const destinationLabel = formatSubteDestination(subte.destino);
             
             return `
-                <button type="button" class="status-item" data-active-subte-id="${subte.id}" data-active-subte-line="${subte.linea}" data-active-subte-color="${color}" data-active-subte-dest="${subte.destino}" style="border-top: none; border-right: none; border-bottom: none; border-left: 4px solid #${color}; width: 100%; text-align: left; cursor: pointer; font-family: inherit; background: transparent;">
-                    <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <p class="status-title">Línea ${subte.linea} a ${subte.destino}</p>
-                            <span class="status-chip" style="background-color: #${color}; color: white; border: none;">${tiempoText}</span>
-                        </div>
+                <button type="button" class="status-item subte-active-card" data-active-subte-id="${subte.id}" data-active-subte-line="${subte.linea}" data-active-subte-color="${color}" data-active-subte-dest="${subte.destino}" style="--subte-line-color: #${color};">
+                    <div class="subte-active-card-main">
+                        <p class="status-title">Linea ${lineLabel} a ${destinationLabel}</p>
                         <p class="line-meta">${estado}</p>
                     </div>
+                    <span class="status-chip subte-active-chip">${tiempoText}</span>
                 </button>
             `;
         }).join('');
