@@ -6,11 +6,28 @@ const HISTORY_LIMIT = 10;
 export function initHistoryModule(context) {
     ctx = context || {};
     const storedHistory = ctx.loadData?.(ctx.storageKey);
-    historyItems = Array.isArray(storedHistory) ? storedHistory : [];
+    historyItems = Array.isArray(storedHistory) ? storedHistory.map(normalizeStoredHistoryRecord) : [];
+    persistHistoryItems();
 }
 
 function persistHistoryItems() {
     ctx.saveData?.(ctx.storageKey, historyItems);
+}
+
+function normalizeStoredHistoryRecord(record) {
+    if (record?.source !== 'subtes') {
+        return record;
+    }
+
+    const stationName = getSubteStationName(record.data || {});
+    if (!stationName) {
+        return record;
+    }
+
+    return {
+        ...record,
+        title: stationName,
+    };
 }
 
 function getRouteName(data = {}) {
@@ -44,6 +61,16 @@ function getTransportHeadsign(data = {}) {
         || 'Sin destino';
 }
 
+function getSubteStationName(data = {}) {
+    return data?.titulo
+        || data?.nombre
+        || data?.stop_name
+        || data?.station
+        || data?.stationName
+        || data?.currentStationName
+        || '';
+}
+
 function getVehiclePosition(data = {}) {
     const vehicle = data?.vehicle || data?.Vehicle || {};
     const position = vehicle?.position || vehicle?._position || {};
@@ -60,6 +87,11 @@ function getHistoryItemId(record) {
     }
 
     const data = record?.data || {};
+    if (record.source === 'subtes') {
+        const stationKey = String(getSubteStationName(data) || data?._searchId || data?.id || data?.ids?.[0] || '').trim().toLowerCase();
+        return `subte-station:${stationKey || 'item'}`;
+    }
+
     const tripUpdate = data?.trip_update || data?.tripUpdate || {};
     const vehicle = data?.vehicle || data?.Vehicle || {};
     const trip = tripUpdate.trip || vehicle.trip || data?.trip || {};
@@ -89,13 +121,14 @@ function buildHistoryRecord(data, source, options = {}) {
     const routeName = getRouteName(data);
     const displayRoute = String(routeName).replace(/l[ií]nea/i, '').replace(/_/g, ' ').trim();
     const sourceLabel = source === 'subtes' ? 'Subte' : 'Colectivo';
+    const subteStationName = getSubteStationName(data);
 
     return {
         historyId: getHistoryItemId({ kind, data }),
         kind,
         source,
         viewedAt,
-        title: source === 'subtes' ? `Subte ${displayRoute || 'Sin linea'}` : `Linea ${routeName}`,
+        title: source === 'subtes' ? (subteStationName || `Subte ${displayRoute || 'Sin linea'}`) : `Linea ${routeName}`,
         subtitle: `${sourceLabel} - ${getTransportHeadsign(data)}`,
         data,
     };
@@ -146,23 +179,21 @@ function renderHistoryCard(record) {
           <p class="line-meta">ID estacion: ${historyData?.id_estacion || historyData?.id || 'N/A'} - Visto: ${formatViewedAt(record.viewedAt)}</p>
         </button>
         <div class="favorite-item-actions">
-          <button type="button" class="secondary-btn" data-card-action="remove-history">Quitar</button>
+          <button type="button" class="history-clear-icon favorite-remove-icon" data-card-action="remove-history" aria-label="Quitar del historial"><span class="trash-icon" aria-hidden="true"></span></button>
         </div>
       </article>
     `;
     }
-
-    const position = getVehiclePosition(historyData);
 
     return `
     <article class="status-item favorite-item" data-history-id="${record.historyId}">
       <button type="button" class="favorite-item-main" data-card-action="open-history">
         <p class="status-title">${record.title || 'Linea'}</p>
         <p class="line-subtitle">${record.subtitle || 'Transporte'}</p>
-        <p class="line-meta">${position.latitude !== undefined && position.longitude !== undefined ? `Lat ${Number(position.latitude).toFixed(4)} - Lon ${Number(position.longitude).toFixed(4)} - ` : ''}Visto: ${formatViewedAt(record.viewedAt)}</p>
+        <p class="line-meta">Visto: ${formatViewedAt(record.viewedAt)}</p>
       </button>
       <div class="favorite-item-actions">
-        <button type="button" class="secondary-btn" data-card-action="remove-history">Quitar</button>
+        <button type="button" class="history-clear-icon favorite-remove-icon" data-card-action="remove-history" aria-label="Quitar del historial"><span class="trash-icon" aria-hidden="true"></span></button>
       </div>
     </article>
   `;
@@ -174,9 +205,13 @@ export function renderHistoryView() {
 
     historySection.innerHTML = `
     <div class="hero-card">
-      <h2>Historial</h2>
+      <div class="hero-icon history-hero-icon" aria-hidden="true">◷</div>
+      <div class="history-view-header">
+        <h2>Historial</h2>
+        ${historyItems.length === 0 ? '' : `<button type="button" class="history-clear-icon" data-history-action="clear-history" aria-label="Vaciar historial"><span class="trash-icon" aria-hidden="true"></span><span>Vaciar</span></button>`}
+      </div>
       <p class="hero-text">Tus consultas recientes de trenes, colectivos y proximamente subtes.</p>
-      <button type="button" class="link-button" data-history-action="go-home">← Volver al inicio</button>
+      <button type="button" class="link-button back-button" data-history-action="go-home">&larr; Volver</button>
       ${historyItems.length === 0
             ? `
           <div class="empty-state">
@@ -185,9 +220,6 @@ export function renderHistoryView() {
           </div>
         `
             : `
-          <div class="history-actions">
-            <button type="button" class="secondary-btn" data-history-action="clear-history">Limpiar historial</button>
-          </div>
           <div id="historyList" class="status-list favorites-list">
             ${historyItems.map(renderHistoryCard).join('')}
           </div>
@@ -259,3 +291,6 @@ export function handleHistoryClick(event) {
 export function getHistoryItems() {
     return historyItems;
 }
+
+
+

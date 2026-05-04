@@ -63,8 +63,6 @@ function buildColectivoTransportCard(item, index, source, fallbackIdPrefix, rend
 
     const linea = item.linea || item.route_short_name || 'N/A';
     const destino = item.ramal_destino || item.trip?.trip_headsign || 'Sin destino';
-    const lat = item.latitud ?? item.vehicle?.position?.latitude;
-    const lon = item.longitud ?? item.vehicle?.position?.longitude;
     const vel = item.velocidad ?? item.vehicle?.position?.speed;
 
     return renderTransportCard({
@@ -74,7 +72,6 @@ function buildColectivoTransportCard(item, index, source, fallbackIdPrefix, rend
         subtitle: destino,
         routeLine: `Unidad ${item.id_vehiculo || item.trip?.trip_id || 'N/A'}`,
         metaLines: [
-            `Posición: Lat ${lat?.toFixed(4) || 'N/A'} - Lon ${lon?.toFixed(4) || 'N/A'}`,
             `Velocidad: ${vel ? (vel * 3.6).toFixed(1) + ' km/h' : '0 km/h'}`
         ],
     });
@@ -240,3 +237,4 @@ export function refreshColectivosViews(renderTransportCard) {
         renderSoloColectivosLines(soloColectivosTripData, soloColectivosCurrentPage, renderTransportCard);
     }
 }
+

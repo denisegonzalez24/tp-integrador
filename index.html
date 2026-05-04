@@ -61,7 +61,7 @@
         <section id="homeHistorySection" class="featured-section home-history-section">
           <div class="featured-header">
             <h2>Historial reciente</h2>
-            <button id="homeHistoryViewAllBtn" class="link-button" type="button">Ver todo →</button>
+            <button id="homeHistoryViewAllBtn" class="link-button soft-link-button" type="button">Ver todo →</button>
           </div>
           <div id="homeHistoryPreview" class="status-list">
             <article class="status-item">
@@ -106,7 +106,7 @@
           <div class="hero-icon" aria-hidden="true">🚌</div>
           <h2>Colectivos</h2>
           <p class="hero-text">Consultá las unidades activas en tiempo real.</p>
-          <button id="colectivosBackBtn" class="link-button" type="button">← Volver</button>
+          <button id="colectivosBackBtn" class="link-button back-button" type="button">← Volver</button>
           <div id="colectivosList" class="results-list">
             <p class="empty">Cargando líneas de colectivos...</p>
           </div>
@@ -125,7 +125,7 @@
           <div class="hero-icon" aria-hidden="true">🚇</div>
           <h2>Subtes</h2>
           <p class="hero-text">Próximos arribos y estado de la red de subtes.</p>
-          <button id="subtesBackBtn" class="link-button" type="button">← Volver</button>
+          <button id="subtesBackBtn" class="link-button back-button" type="button">← Volver</button>
           
           <div style="margin-top: 1.5rem; text-align: left;">
             <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">En circulación ahora</h3>
@@ -141,7 +141,7 @@
           <div class="hero-icon" aria-hidden="true">🚆</div>
           <h2>Líneas de Trenes</h2>
           <p class="hero-text">Seleccioná una línea para ver sus ramales y estado del servicio.</p>
-          <button id="trenesBackBtn" class="link-button" type="button">← Volver al inicio</button>
+          <button id="trenesBackBtn" class="link-button back-button" type="button">← Volver</button>
           <div id="trenesList" class="results-list">
             <p class="empty">Cargando líneas de trenes...</p>
           </div>
@@ -150,7 +150,7 @@
 
       <section id="view-buscar" class="view">
         <div class="hero-card">
-          <button id="buscarBackBtn" class="link-button" type="button">← Volver al inicio</button>
+          <button id="buscarBackBtn" class="link-button back-button" type="button">← Volver</button>
           <h2>Buscar transporte</h2>
           <p class="hero-text">Elegí el tipo y buscá en trenes, colectivos y subtes.</p>
           <div id="searchTypeFilters" class="search-type-filters" role="tablist" aria-label="Tipo de transporte">
@@ -173,16 +173,16 @@
         </div>
       </section>
 
-      <section id="view-detalle" class="view" style="background-color: #ffffff;">
-        <div id="detalleHero" class="hero-card" style="background-color: #5B6B7F; color: #333333; border-bottom: 1px solid #e0e0e0;">
-          <button id="detalleBackBtn" class="link-button" type="button" style="color: #333333;">← Volver</button>
-          <h2 id="detalleTitle" style="color: #333333;">Detalle de Línea</h2>
-          <p id="detalleSubtitle" class="hero-text" style="color: #333333;">Información del recorrido.</p>
+      <section id="view-detalle" class="view">
+        <div id="detalleHero" class="hero-card">
+          <button id="detalleBackBtn" class="link-button back-button" type="button">← Volver</button>
+          <h2 id="detalleTitle">Detalle de Línea</h2>
+          <p id="detalleSubtitle" class="hero-text">Información del recorrido.</p>
         </div>
-        <div id="detalleContent" class="status-list" style="background-color: #ffffff; color: #111111; padding: 1.5rem 1rem;">
+        <div id="detalleContent" class="status-list detail-content">
           <!-- Detalle inyectado desde JS -->
         </div>
-        <div id="detalleActions" style="background-color: #f5f5f5; color: #333333; border-top: 1px solid #e0e0e0; padding: 1.5rem 1rem; text-align: center;">
+        <div id="detalleActions" class="detail-extra-actions">
           <!-- Contenedor para acciones/botones inyectados por JS -->
         </div>
       </section>
@@ -207,6 +207,7 @@
         <div class="hero-card">
           <h2>Estudio infoTech</h2>
           <p class="hero-text">Desarrollo de aplicaciones móviles y soluciones digitales.</p>
+          <a class="link-button back-button contact-home-link" href="#home">← Volver</a>
           <div class="status-list contact-info-list">
             <article class="status-item">
               <div>
@@ -238,6 +239,7 @@
     <a class="nav-link nav-link-active" href="#home" data-view="home">Inicio</a>
     <a class="nav-link" href="#buscar" data-view="buscar">Buscar</a>
     <a class="nav-link" href="#historial" data-view="historial">Historial</a>
+    <a class="nav-link" href="#favoritos" data-view="favoritos">Favoritos</a>
     <a class="nav-link" href="#contacto" data-view="contacto">Contacto</a>
   </nav>
 

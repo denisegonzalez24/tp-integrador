@@ -1,5 +1,7 @@
 import { getTrainArrivalsByStation } from './api.js';
 import { loadData, saveData } from './storage.js';
+import { initFavoritesModule, isFavoriteItem, toggleFavoriteItem } from './favoritos.js';
+import { getStationLineFromRamales } from './trenes.js';
 
 const ARRIVALS_COUNT = 5;
 const FAVORITES_STORAGE_KEY = 'favoriteTransportItems';
@@ -9,33 +11,8 @@ let currentSentido = 'todos';
 let destinoSeleccionado = 'Todos';
 let currentArrivals = [];
 
-function getDetailFavoriteId(stationData) {
-    return `buscar:${String(stationData?.id_estacion || stationData?.id || currentStationId || 'estacion').trim().toLowerCase()}`;
-}
-
-function buildDetailFavoriteRecord(stationData) {
-    return {
-        favoriteId: getDetailFavoriteId(stationData),
-        source: 'buscar',
-        savedAt: new Date().toISOString(),
-        title: `Estacion ${stationData?.nombre || 'sin nombre'}`,
-        subtitle: `Linea ${stationData?.linea || stationData?.lineName || 'Tren'}`,
-        data: stationData,
-    };
-}
-
-function loadFavoriteItems() {
-    const storedFavorites = loadData(FAVORITES_STORAGE_KEY);
-    return Array.isArray(storedFavorites) ? storedFavorites : [];
-}
-
 function isDetailFavorite(stationData) {
-    const favoriteId = getDetailFavoriteId(stationData);
-    return loadFavoriteItems().some(item => item.favoriteId === favoriteId);
-}
-
-function persistFavoriteItems(favoriteItems) {
-    saveData(FAVORITES_STORAGE_KEY, favoriteItems);
+    return isFavoriteItem(stationData, 'buscar');
 }
 
 function toggleDetailFavorite(stationData) {
@@ -43,15 +20,7 @@ function toggleDetailFavorite(stationData) {
         return;
     }
 
-    const favoriteId = getDetailFavoriteId(stationData);
-    const favoriteItems = loadFavoriteItems();
-    const existingIndex = favoriteItems.findIndex(item => item.favoriteId === favoriteId);
-
-    if (existingIndex >= 0) {
-        persistFavoriteItems(favoriteItems.filter(item => item.favoriteId !== favoriteId));
-    } else {
-        persistFavoriteItems([buildDetailFavoriteRecord(stationData), ...favoriteItems]);
-    }
+    toggleFavoriteItem(stationData, 'buscar');
 }
 
 function getCurrentStationData() {
@@ -240,16 +209,6 @@ function getArrivalTime(item) {
         || secondsToDisplayTime(item?.arribo?.segundos);
 }
 
-function renderSentidoFilters() {
-    return `
-        <div class="train-search-actions" style="margin: 16px 0 4px;">
-            <button type="button" class="secondary-btn detail-filter-btn ${currentSentido === 'todos' ? 'is-active' : ''}" data-sentido-filter="todos">Todos</button>
-            <button type="button" class="secondary-btn detail-filter-btn ${currentSentido === '1' ? 'is-active' : ''}" data-sentido-filter="1">Ida</button>
-            <button type="button" class="secondary-btn detail-filter-btn ${currentSentido === '2' ? 'is-active' : ''}" data-sentido-filter="2">Vuelta</button>
-        </div>
-    `;
-}
-
 function getUniqueDestinos(list = []) {
     return Array.from(
         new Set(
@@ -276,22 +235,6 @@ export function renderFiltros(destinos = []) {
             `).join('')}
         </div>
     `;
-}
-
-function bindSentidoFilters() {
-    const buttons = Array.from(document.querySelectorAll('[data-sentido-filter]'));
-
-    buttons.forEach(button => {
-        button.addEventListener('click', async () => {
-            const nextSentido = button.dataset.sentidoFilter || 'todos';
-            if (nextSentido === currentSentido) {
-                return;
-            }
-
-            currentSentido = nextSentido;
-            await cargarArribos(currentStationId, currentSentido);
-        });
-    });
 }
 
 function bindDestinoFilters() {
@@ -331,14 +274,12 @@ function renderDetailLayout(arrivals) {
     const destinos = getUniqueDestinos(currentArrivals);
 
     detailState.innerHTML = `
-        ${renderSentidoFilters()}
         ${renderFiltros(destinos)}
         <div id="arrivalsResults">
             ${renderArrivals(arrivals)}
         </div>
     `;
 
-    bindSentidoFilters();
     bindDestinoFilters();
 }
 
@@ -375,11 +316,8 @@ function renderLoadingState() {
     }
 
     detailState.innerHTML = `
-        ${renderSentidoFilters()}
         <p class="empty">Cargando arribos...</p>
     `;
-
-    bindSentidoFilters();
 }
 
 function renderFavoriteStationButton() {
@@ -492,14 +430,11 @@ function renderRequestErrorState() {
     }
 
     detailState.innerHTML = `
-    ${renderSentidoFilters()}
     <article class="status-item" style="align-items: flex-start; flex-direction: column; gap: 8px;">
       <p class="status-title">No se pudieron cargar los arribos</p>
       <p class="line-meta">Intenta nuevamente en unos instantes.</p>
     </article>
   `;
-
-    bindSentidoFilters();
 }
 
 function renderNotFoundState(stationId) {
@@ -520,6 +455,18 @@ function renderNotFoundState(stationId) {
 async function init() {
     const params = new URLSearchParams(window.location.search);
     currentStationId = params.get('id') || '';
+
+    initFavoritesModule({
+        loadData,
+        saveData,
+        storageKey: FAVORITES_STORAGE_KEY,
+        getStationLineFromRamales,
+        onFavoritesChanged: () => {
+            renderDetailLayout(destinoSeleccionado === 'Todos'
+                ? currentArrivals
+                : currentArrivals.filter(item => getArrivalFilterDestination(item) === destinoSeleccionado));
+        },
+    });
 
     const backBtn = document.getElementById('detailBackBtn');
     backBtn?.addEventListener('click', () => window.history.back());

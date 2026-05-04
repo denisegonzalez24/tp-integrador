@@ -34,6 +34,36 @@ export function renderTransportCard({ item, source, title, subtitle, metaLines =
   `;
 }
 
+function resetDetailHeroStyles(detalleHero, detalleTitle, detalleSubtitle) {
+  if (detalleHero) {
+    detalleHero.style.backgroundColor = '';
+    detalleHero.style.color = '';
+    detalleHero.style.borderBottom = '';
+  }
+  if (detalleTitle) detalleTitle.style.color = '';
+  if (detalleSubtitle) detalleSubtitle.style.color = '';
+}
+
+function normalizeSubteLineLabel(value = '') {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  const cleanValue = String(rawValue || '')
+    .replace(/linea/ig, '')
+    .replace(/_/g, ' ')
+    .trim();
+  const match = cleanValue.match(/[A-H]/i);
+  return match ? match[0].toUpperCase() : cleanValue.toUpperCase();
+}
+
+function getSubteStationName(data = {}) {
+  return data?.titulo
+    || data?.nombre
+    || data?.stop_name
+    || data?.station
+    || data?.stationName
+    || data?.currentStationName
+    || '';
+}
+
 export function renderFavoriteCard(record) {
   const favoriteData = record?.data || {};
   const title = record?.title || 'Favorito';
@@ -219,17 +249,14 @@ export function renderLineDetails(data, source = 'detalle', staticSubteData) {
   // Renderizado a nivel línea (Ruta entera de subte estática)
   if (data?.isStaticSubte) {
     const { routeId, paradas, routeInfo, realTimeSubte } = data;
-    const routeName = routeInfo?.route_short_name || routeId;
+    const routeName = normalizeSubteLineLabel(routeInfo?.route_short_name || routeId || data?.linea);
     const routeLongName = routeInfo?.route_long_name || 'Recorrido';
     const color = routeInfo?.route_color || 'ccc';
-    const textColor = routeInfo?.route_text_color || 'ffffff';
+    const stationName = getSubteStationName(data);
     
-    if (detalleHero) {
-        detalleHero.style.backgroundColor = `#${color}`;
-        detalleHero.style.color = `#${textColor}`;
-    }
-    if (detalleTitle) detalleTitle.textContent = `Línea ${routeName}`;
-    if (detalleSubtitle) detalleSubtitle.textContent = `Subte · ${routeLongName}`;
+    resetDetailHeroStyles(detalleHero, detalleTitle, detalleSubtitle);
+    if (detalleTitle) detalleTitle.textContent = stationName || `Linea ${routeName}`;
+    if (detalleSubtitle) detalleSubtitle.textContent = `Subte - Linea ${routeName}${routeLongName ? ` - ${routeLongName}` : ''}`;
 
     const rtEntities = realTimeSubte?.Entity || realTimeSubte?.entity || [];
     const rtByStop = {};
@@ -295,7 +322,7 @@ export function renderLineDetails(data, source = 'detalle', staticSubteData) {
 
     container.innerHTML = `
       <div class="detail-actions">
-        <button type="button" class="secondary-btn ${favoriteActive ? 'favorite-active' : ''}" data-card-action="favorite-detail" aria-pressed="${favoriteActive}">${favoriteActive ? 'Quitar de favoritos' : 'Guardar en favoritos'}</button>
+        <button type="button" class="favorite-toggle ${favoriteActive ? 'is-active' : ''}" data-card-action="favorite-detail" aria-pressed="${favoriteActive}" aria-label="${favoriteActive ? 'Quitar de favoritos' : 'Agregar a favoritos'}">${favoriteActive ? '&#9733;' : '&#9734;'}</button>
       </div>
       <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px; width: 100%;">
         <p class="status-title">Recorrido y Paradas</p>
@@ -329,15 +356,17 @@ export function renderLineDetails(data, source = 'detalle', staticSubteData) {
   }
 
   routeName = routeName || 'Sin línea';
-  const displayRoute = routeName.replace(/l[ií]nea/i, '').replace(/_/g, ' ').trim();
+  const subteStationName = source === 'subtes' ? getSubteStationName(data) : '';
+  const displayRoute = source === 'subtes'
+    ? normalizeSubteLineLabel(routeName)
+    : String(routeName).replace(/l[ií]nea/i, '').replace(/_/g, ' ').trim();
   const favoriteActive = isFavoriteItem(data, source);
 
-  if (detalleHero) {
-      detalleHero.style.backgroundColor = ''; // Restablecer al color por defecto de CSS
-      detalleHero.style.color = ''; // Restablecer al color por defecto de CSS
-  }
-  if (detalleTitle) detalleTitle.textContent = `Línea ${displayRoute === 'Sin línea' ? 'Sin línea' : displayRoute}`;
-  if (detalleSubtitle) detalleSubtitle.textContent = `${tripHeadsign}${directionLabel ? ` · ${directionLabel}` : ''}`;
+  resetDetailHeroStyles(detalleHero, detalleTitle, detalleSubtitle);
+  if (detalleTitle) detalleTitle.textContent = subteStationName || `Linea ${displayRoute === 'Sin línea' ? 'Sin línea' : displayRoute}`;
+  if (detalleSubtitle) detalleSubtitle.textContent = source === 'subtes'
+    ? `Subte${displayRoute && displayRoute !== 'Sin línea' ? ` - Linea ${displayRoute}` : ''}`
+    : `${tripHeadsign}${directionLabel ? ` · ${directionLabel}` : ''}`;
 
   let mapHTML = '';
   if (lat !== undefined && lon !== undefined && lat !== 0 && lon !== 0) {
@@ -358,7 +387,7 @@ export function renderLineDetails(data, source = 'detalle', staticSubteData) {
 
   container.innerHTML = `
     <div class="detail-actions">
-      <button type="button" class="secondary-btn ${favoriteActive ? 'favorite-active' : ''}" data-card-action="favorite-detail" aria-pressed="${favoriteActive}">${favoriteActive ? 'Quitar de favoritos' : 'Guardar en favoritos'}</button>
+      <button type="button" class="favorite-toggle ${favoriteActive ? 'is-active' : ''}" data-card-action="favorite-detail" aria-pressed="${favoriteActive}" aria-label="${favoriteActive ? 'Quitar de favoritos' : 'Agregar a favoritos'}">${favoriteActive ? '&#9733;' : '&#9734;'}</button>
     </div>
     <article class="status-item" style="flex-direction: column; align-items: flex-start; gap: 8px; width: 100%;">
       <p class="status-title">Información del Vehículo</p>
