@@ -113,7 +113,6 @@ function renderRamalStationsButtons(stations = []) {
         return `
       <button type="button" class="train-station-card" data-card-action="open-station" data-station-id="${stationId}">
         <span class="train-station-name">${stationName}</span>
-        <span class="train-station-action">Ver detalle</span>
       </button>
     `;
     }).join('');
@@ -164,7 +163,6 @@ async function renderTrenesLines(data, listContainerId = 'trenesList') {
           </summary>
           <div class="ramal-estaciones">
             <p class="estaciones-title">Recorrido: ${estacionInicial} -> ${estacionFinal}</p>
-            <p class="estaciones-count">${ramal.estaciones} estaciones</p>
             <div class="ramal-stations-list" data-ramal-stations="${ramal.id}">
               <p class="empty">Desplega este ramal para cargar estaciones.</p>
             </div>

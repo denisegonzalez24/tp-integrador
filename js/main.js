@@ -48,6 +48,19 @@ const TRANSPORT_DATA_KEY = 'transportData';
 const FAVORITES_STORAGE_KEY = 'favoriteTransportItems';
 const HISTORY_STORAGE_KEY = 'searchHistoryItems';
 const TRAIN_STATIONS_CACHE_KEY = 'trainStationsCache';
+const INDEX_VIEW_NAMES = new Set(['home', 'buscar', 'colectivos', 'solo-colectivos', 'subtes', 'trenes', 'detalle']);
+const ROUTE_BY_VIEW = {
+  home: './index.html',
+  buscar: './index.html#buscar',
+  colectivos: './index.html#colectivos',
+  'solo-colectivos': './index.html#solo-colectivos',
+  subtes: './index.html#subtes',
+  trenes: './index.html#trenes',
+  detalle: './index.html#detalle',
+  favoritos: './favoritos.html',
+  historial: './historial.html',
+  contacto: './contacto.html',
+};
 const views = Array.from(document.querySelectorAll('.view'));
 const navLinks = Array.from(document.querySelectorAll('.bottom-nav .nav-link'));
 const validViews = views.map(view => view.id.replace('view-', ''));
@@ -260,9 +273,28 @@ async function loadAndRenderServiceAlerts() {
   });
 }
 
+function getCurrentPageKey() {
+  const pathname = window.location.pathname.split(/[\\/]/).pop()?.toLowerCase() || '';
+
+  if (!pathname || pathname === 'index.html' || pathname === 'index.htm' || pathname === 'home.html') {
+    return 'home';
+  }
+
+  if (pathname === 'favoritos.html') return 'favoritos';
+  if (pathname === 'historial.html') return 'historial';
+  if (pathname === 'contacto.html') return 'contacto';
+
+  return 'home';
+}
+
 function getViewFromHash() {
+  const pageKey = getCurrentPageKey();
+  if (pageKey !== 'home') {
+    return pageKey;
+  }
+
   const hash = window.location.hash.slice(1).toLowerCase();
-  return document.getElementById(`view-${hash}`) ? hash : 'home';
+  return INDEX_VIEW_NAMES.has(hash) && document.getElementById(`view-${hash}`) ? hash : 'home';
 }
 
 function setActiveView(viewName) {
@@ -278,8 +310,21 @@ function setActiveView(viewName) {
 }
 
 function navigateTo(viewName) {
-  const target = document.getElementById(`view-${viewName}`) ? viewName : 'home';
-  window.location.hash = target;
+  const target = ROUTE_BY_VIEW[viewName] || ROUTE_BY_VIEW.home;
+  const currentPage = getCurrentPageKey();
+  const isIndexTarget = target.startsWith('./index.html');
+
+  if (currentPage === 'home' && isIndexTarget) {
+    const nextHash = target.includes('#') ? target.slice(target.indexOf('#')) : '';
+    if (window.location.hash !== nextHash) {
+      window.location.hash = nextHash;
+    } else {
+      setActiveView(getViewFromHash());
+    }
+    return;
+  }
+
+  window.location.href = target;
 }
 window.navigateTo = navigateTo; // Expuesto globalmente
 
@@ -310,7 +355,7 @@ function startViewRefresh() {
         } else {
           renderSoloColectivosLines(freshData, getSoloColectivosCurrentPage(), renderTransportCard);
         }
-        
+
         const listContainer = document.getElementById(currentView === 'colectivos' ? 'colectivosList' : 'soloColectivosList');
         if (listContainer) {
           listContainer.classList.remove('content-refreshed');
@@ -332,8 +377,8 @@ function startDetailRefresh() {
       stopDetailRefresh();
       return;
     }
-        
-        let dataActualizada = false;
+
+    let dataActualizada = false;
 
     // Si estamos viendo el detalle de un subte y tenemos su ID, pedimos los datos actualizados
     if (currentDetailData && currentDetailData.isStaticSubte && currentDetailData._subteId) {
@@ -341,38 +386,38 @@ function startDetailRefresh() {
         const entidad = await getSubteRecorrido(currentDetailData._subteId);
         currentDetailData.realTimeSubte = { Entity: [entidad] };
         renderLineDetailsUI(currentDetailData, currentDetailSource);
-            dataActualizada = true;
+        dataActualizada = true;
       } catch (error) {
         console.error('Error al auto-recargar el subte:', error);
       }
     }
-        // Si estamos viendo el detalle de un colectivo
-        else if (currentDetailData && currentDetailData.id_vehiculo) {
-          try {
-            const colectivos = await getVehiclePositions();
-            const colectivoActualizado = colectivos.find(c => c.id_vehiculo === currentDetailData.id_vehiculo);
-            if (colectivoActualizado) {
-              currentDetailData = colectivoActualizado;
-              renderLineDetailsUI(currentDetailData, currentDetailSource);
-              dataActualizada = true;
-            }
-          } catch (error) {
-            console.error('Error al auto-recargar el colectivo:', error);
-          }
+    // Si estamos viendo el detalle de un colectivo
+    else if (currentDetailData && currentDetailData.id_vehiculo) {
+      try {
+        const colectivos = await getVehiclePositions();
+        const colectivoActualizado = colectivos.find(c => c.id_vehiculo === currentDetailData.id_vehiculo);
+        if (colectivoActualizado) {
+          currentDetailData = colectivoActualizado;
+          renderLineDetailsUI(currentDetailData, currentDetailSource);
+          dataActualizada = true;
         }
+      } catch (error) {
+        console.error('Error al auto-recargar el colectivo:', error);
+      }
+    }
 
-        if (dataActualizada) {
-          // ¡Magia! Hacemos un "flash" en el contenedor para mostrar que se actualizó.
-          const container = document.getElementById('detalleContent');
-          if (container) {
-            container.classList.remove('content-refreshed');
-            void container.offsetWidth; // Forzamos un reflow visual para reiniciar la animación
-            container.classList.add('content-refreshed');
-            container.addEventListener('animationend', () => {
-              container.classList.remove('content-refreshed');
-            }, { once: true });
-          }
-        }
+    if (dataActualizada) {
+      // ¡Magia! Hacemos un "flash" en el contenedor para mostrar que se actualizó.
+      const container = document.getElementById('detalleContent');
+      if (container) {
+        container.classList.remove('content-refreshed');
+        void container.offsetWidth; // Forzamos un reflow visual para reiniciar la animación
+        container.classList.add('content-refreshed');
+        container.addEventListener('animationend', () => {
+          container.classList.remove('content-refreshed');
+        }, { once: true });
+      }
+    }
   }, 30000); // 30000 milisegundos = 30 segundos
 }
 
@@ -573,6 +618,8 @@ async function renderViewForName(viewName, transportData) {
       break;
     case 'historial':
       renderHistoryView();
+      break;
+    case 'contacto':
       break;
     case 'detalle':
       if (currentDetailData) {
@@ -854,7 +901,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const entidad = await getSubteRecorrido(subteId);
       const stopUpdates = entidad?.Linea?.Estaciones || entidad?.TripUpdate?.StopTimeUpdate || entidad?.trip_update?.stop_time_update || [];
-      
+
       // Simplificamos la obtención de paradas, usando directamente la data de la API en vivo
       const paradas = stopUpdates.map(stu => ({ stop_id: stu.stop_id || stu.StopId, stop_name: stu.stop_name })).filter(p => p.stop_id && p.stop_name);
 

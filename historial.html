@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial - Viajero AMBA</title>
+    <link rel="stylesheet" href="./css/styles.css">
+    <style>
+        @keyframes flash-bg {
+            0% {
+                background-color: inherit;
+            }
+
+            50% {
+                background-color: #fff8e1;
+            }
+
+            100% {
+                background-color: inherit;
+            }
+        }
+
+        .content-refreshed {
+            animation: flash-bg 0.8s ease-out;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="top-header" id="topHeader" aria-hidden="true">
+        <span class="top-header-title">Viajero AMBA</span>
+    </header>
+
+    <div class="app-shell">
+        <main id="appViews">
+            <section id="view-historial" class="view active">
+                <!-- Renderizado dinámicamente desde JS -->
+            </section>
+        </main>
+    </div>
+
+    <nav class="bottom-nav" aria-label="Navegación principal">
+        <a class="nav-link" href="./index.html" data-view="home">Home</a>
+        <a class="nav-link" href="./favoritos.html" data-view="favoritos">Favoritos</a>
+        <a class="nav-link nav-link-active" href="./historial.html" data-view="historial">Historial</a>
+        <a class="nav-link" href="./contacto.html" data-view="contacto">Contacto</a>
+    </nav>
+
+    <script type="module" src="./js/main.js"></script>
+</body>
+
+</html>
