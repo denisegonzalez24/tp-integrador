@@ -9,10 +9,20 @@
   <style>
     /* Animación para el refresco de datos */
     @keyframes flash-bg {
-      0% { background-color: inherit; }
-      50% { background-color: #fff8e1; } /* Un flash amarillo claro y suave */
-      100% { background-color: inherit; }
+      0% {
+        background-color: inherit;
+      }
+
+      50% {
+        background-color: #fff8e1;
+      }
+
+      /* Un flash amarillo claro y suave */
+      100% {
+        background-color: inherit;
+      }
     }
+
     .content-refreshed {
       animation: flash-bg 0.8s ease-out;
     }
@@ -126,7 +136,7 @@
           <h2>Subtes</h2>
           <p class="hero-text">Próximos arribos y estado de la red de subtes.</p>
           <button id="subtesBackBtn" class="link-button back-button" type="button">← Volver</button>
-          
+
           <div style="margin-top: 1.5rem; text-align: left;">
             <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">En circulación ahora</h3>
             <div id="subtesActivosList" class="status-list subte-active-list">
@@ -224,8 +234,7 @@
             </article>
           </div>
           <div class="contact-map" aria-label="Mapa de la oficina de Estudio infoTech en la Catedral de La Plata">
-            <iframe
-              title="Ubicación de Estudio infoTech"
+            <iframe title="Ubicación de Estudio infoTech"
               src="https://www.openstreetmap.org/export/embed.html?bbox=-57.9636%2C-34.9315%2C-57.9436%2C-34.9115&amp;layer=mapnik&amp;marker=-34.9215%2C-57.9536"
               loading="lazy">
             </iframe>

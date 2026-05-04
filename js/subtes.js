@@ -37,23 +37,23 @@ function formatSubteDestination(value = '') {
 export async function loadAndRenderSubtesActivos() {
     const container = document.getElementById('subtesActivosList');
     if (!container) return;
-    
+
     try {
         const activos = await getSubtesActivos();
         if (!activos || activos.length === 0) {
             container.innerHTML = '<p class="empty">No hay formaciones reportando posición ahora.</p>';
             return;
         }
-        
+
         const topActivos = activos.slice(0, 6); // Mostramos los primeros 6 para no saturar la pantalla
-        
+
         container.innerHTML = topActivos.map(subte => {
             const color = getLineaColor(subte.linea);
             const estado = subte.detenidoEn ? `Detenido en ${subte.detenidoEn}` : `Próx. parada: ${subte.proximaParada}`;
             const tiempoText = subte.tiempoLlegada === 0 ? 'Llegando' : `En ${subte.tiempoLlegada} min`;
             const lineLabel = normalizeSubteLineLabel(subte.linea);
             const destinationLabel = formatSubteDestination(subte.destino);
-            
+
             return `
                 <button type="button" class="status-item subte-active-card" data-active-subte-id="${subte.id}" data-active-subte-line="${subte.linea}" data-active-subte-color="${color}" data-active-subte-dest="${subte.destino}" style="--subte-line-color: #${color};">
                     <div class="subte-active-card-main">
@@ -64,7 +64,7 @@ export async function loadAndRenderSubtesActivos() {
                 </button>
             `;
         }).join('');
-        
+
     } catch (error) {
         console.error('Error cargando subtes activos:', error);
         container.innerHTML = '<p class="empty">No se pudo cargar la información en vivo.</p>';

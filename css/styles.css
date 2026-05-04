@@ -92,11 +92,11 @@ a {
   box-shadow: var(--shadow);
 }
 
-#view-home > .hero-card {
+#view-home>.hero-card {
   text-align: center;
 }
 
-#view-home > .hero-card .hero-icon {
+#view-home>.hero-card .hero-icon {
   margin-left: auto;
   margin-right: auto;
 }
@@ -351,10 +351,10 @@ h1 {
   gap: 12px;
 }
 
-.results-list > .empty,
-.favorites-list > .empty,
-.train-arrivals-list > .empty,
-.ramal-stations-list > .empty {
+.results-list>.empty,
+.favorites-list>.empty,
+.train-arrivals-list>.empty,
+.ramal-stations-list>.empty {
   grid-column: 1 / -1;
 }
 
@@ -1214,6 +1214,7 @@ h1 {
 }
 
 @media (max-width: 430px) {
+
   .trenes-line-summary,
   .trenes-ramal-summary,
   .ramal-estaciones {
@@ -1299,6 +1300,7 @@ h1 {
 }
 
 @media (max-width: 480px) {
+
   .trenes-line-details,
   .trenes-ramal-details {
     margin-bottom: 0;
@@ -1324,6 +1326,7 @@ h1 {
 }
 
 @media (min-width: 640px) and (max-width: 767px) {
+
   .results-list,
   .favorites-list,
   .train-arrivals-list,
@@ -1398,4 +1401,3 @@ h1 {
   color: var(--accent);
   background: rgba(0, 179, 126, 0.1);
 }
-
